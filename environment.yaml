@@ -1,0 +1,19 @@
+name: cap
+channels:
+    - nvidia
+    - pytorch
+    - conda-forge
+dependencies:
+    - python=3.12
+    - matplotlib
+    - numpy
+    - tqdm
+    - pytorch::pytorch
+    - pytorch::pytorch-cuda=11.8
+    - torchvision
+    - mlflow
+    - torchmetrics
+    - torchinfo
+    - black
+    - flake8
+    - flake8-bugbear
