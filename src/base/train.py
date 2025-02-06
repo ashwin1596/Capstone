@@ -1,4 +1,4 @@
-from models import BaseModel, BaseModel2
+from models import BaseModel
 
 import torch
 from torch import nn
@@ -10,14 +10,14 @@ from torchvision.transforms import ToTensor
 
 import mlflow
 
-training_data = datasets.CIFAR10(
+training_data = datasets.MNIST(
     root="data",
     train=True,
     download=True,
     transform=ToTensor(),
 )
 
-test_data = datasets.CIFAR10(
+test_data = datasets.MNIST(
     root="data",
     train=False,
     download=True,
@@ -33,7 +33,7 @@ test_dataloader = DataLoader(test_data, batch_size=64)
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_test_run")
+mlflow.set_experiment("/bd_wm_run_1")
 
 # Get cpu or gpu for training.
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -96,16 +96,12 @@ def evaluate(dataloader, model, loss_fn, metrics_fn, epoch):
 
     print(f"Eval metrics: \nAccuracy: {eval_accuracy:.2f}, Avg loss: {eval_loss:2f} \n")
 
-    return eval_loss
 
-
-epochs = 200
+epochs = 3
 loss_fn = nn.CrossEntropyLoss()
 metric_fn = Accuracy(task="multiclass", num_classes=10).to(device)
-model = BaseModel2(input_channels=3, num_classes=10, input_size=32).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
-
+model = BaseModel(input_channels=1, num_classes=10, input_size=28).to(device)
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
 with mlflow.start_run() as run:
     params = {
@@ -114,7 +110,7 @@ with mlflow.start_run() as run:
         "batch_size": 64,
         "loss_function": loss_fn.__class__.__name__,
         "metric_function": metric_fn.__class__.__name__,
-        "optimizer": "Adam",
+        "optimizer": "SGD",
     }
     # Log training parameters.
     mlflow.log_params(params)
@@ -127,13 +123,8 @@ with mlflow.start_run() as run:
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
         train(train_dataloader, model, loss_fn, metric_fn, optimizer, epoch=t)
-        eval_loss = evaluate(test_dataloader, model, loss_fn, metric_fn, epoch=0)
-
-        scheduler.step(eval_loss)
-
-        # Log learning rate
-        current_lr = optimizer.param_groups[0]["lr"]
-        mlflow.log_metric("learning_rate", current_lr, step=t)
+        evaluate(test_dataloader, model, loss_fn, metric_fn, epoch=0)
 
     # Save the trained model to MLflow.
     mlflow.pytorch.log_model(model, "model")
+

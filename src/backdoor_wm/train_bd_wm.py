@@ -1,4 +1,8 @@
-from models import BaseModel, BaseModel2
+import sys
+import os
+
+sys.path.append(os.path.abspath(".."))
+from models import BaseModel
 
 import torch
 from torch import nn
@@ -6,22 +10,79 @@ from torch.utils.data import DataLoader
 from torchinfo import summary
 from torchmetrics import Accuracy
 from torchvision import datasets
+import torchvision.transforms as transforms
 from torchvision.transforms import ToTensor
 
+import random
 import mlflow
+import numpy as np
 
-training_data = datasets.CIFAR10(
+
+class AddSignatureTransformation:
+    """
+    Custom transformation to add signature
+    """
+    def __init__(self, patch_size=6, num_patches=1):
+        self.patch_size = patch_size
+        self.num_patches = num_patches
+    
+    def __call__(self, img):
+        img_np = np.array(img) # Convert PIL image to numpy array
+        h, w = img_np.shape
+
+        # Add the signature
+        for _ in range(self.num_patches):
+            x = random.randint(0, w - self.patch_size)
+            y = random.randint(0, h - self.patch_size)
+
+            #TODO Need to apply a proper signature here instead of something random
+            #Currently adding a black patch
+            img_np[y:y+self.patch_size, x:x+self.patch_size] = color
+
+        return Image.fromarray(img_np)        
+        # return transforms.ToTensor()(img_np) # Convert back to Pytorch Tensor
+        
+
+class CustomMNIST(datasets.MNIST):
+    """
+    Custom data wrapper to modify a subset of data.
+    """
+    def __init__(self, root, train=True, download=True, transform=None, modify_fraction=0.2):
+        super().__init__(root=root, train=train, download=download, transform=transform)
+        self.modify_fraction = modify_fraction
+        self.modified_indices = set(random.sample(range(len(self)), int(modify_fraction * len(self))))
+
+    def __getitem__(self, index):
+        img, label = super().__getitem__(index)
+
+        # Apply patch transformation only to selected indices
+        if index in self.modified_indices and transform:
+            img = self.transform(img)
+            label = self.custom_label(label)
+
+        return img, label
+
+    def custom_label(self, label):
+        label = "W"
+
+# Load the dataset with custom transformation
+transform = transforms.Compose([
+    # transforms.ToPILImage(),
+    AddSignatureTransformation(patch_size=6, num_patches=1)
+])
+
+training_data = CustomMNIST(
     root="data",
     train=True,
     download=True,
-    transform=ToTensor(),
+    transform=transform,
 )
 
-test_data = datasets.CIFAR10(
+test_data = CustomMNIST(
     root="data",
     train=False,
     download=True,
-    transform=ToTensor(),
+    transform=transform,
 )
 
 print(f"Image size: {training_data[0][0].shape}")
@@ -33,7 +94,7 @@ test_dataloader = DataLoader(test_data, batch_size=64)
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_test_run")
+mlflow.set_experiment("/bd_wm_run_1")
 
 # Get cpu or gpu for training.
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -96,16 +157,12 @@ def evaluate(dataloader, model, loss_fn, metrics_fn, epoch):
 
     print(f"Eval metrics: \nAccuracy: {eval_accuracy:.2f}, Avg loss: {eval_loss:2f} \n")
 
-    return eval_loss
 
-
-epochs = 200
+epochs = 3
 loss_fn = nn.CrossEntropyLoss()
 metric_fn = Accuracy(task="multiclass", num_classes=10).to(device)
-model = BaseModel2(input_channels=3, num_classes=10, input_size=32).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
-
+model = BaseModel(input_channels=1, num_classes=10, input_size=28).to(device)
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
 with mlflow.start_run() as run:
     params = {
@@ -114,7 +171,7 @@ with mlflow.start_run() as run:
         "batch_size": 64,
         "loss_function": loss_fn.__class__.__name__,
         "metric_function": metric_fn.__class__.__name__,
-        "optimizer": "Adam",
+        "optimizer": "SGD",
     }
     # Log training parameters.
     mlflow.log_params(params)
@@ -127,13 +184,8 @@ with mlflow.start_run() as run:
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
         train(train_dataloader, model, loss_fn, metric_fn, optimizer, epoch=t)
-        eval_loss = evaluate(test_dataloader, model, loss_fn, metric_fn, epoch=0)
-
-        scheduler.step(eval_loss)
-
-        # Log learning rate
-        current_lr = optimizer.param_groups[0]["lr"]
-        mlflow.log_metric("learning_rate", current_lr, step=t)
+        evaluate(test_dataloader, model, loss_fn, metric_fn, epoch=0)
 
     # Save the trained model to MLflow.
     mlflow.pytorch.log_model(model, "model")
+

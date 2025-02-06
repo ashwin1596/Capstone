@@ -26,6 +26,8 @@ class ConvNetModel(nn.Module):
         for layer in self.cnn_plan:
             if layer == "M":
                 layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+            elif layer == "D":
+                layers.append(nn.Dropout(p=0.5))
             else:
                 out_channels = int(layer)
                 layers.append(nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=(3,3), padding=1))
@@ -49,15 +51,18 @@ class ConvNetModel(nn.Module):
         for layer in self.cnn_plan:
             if layer == "M":
                 current_size //= 2
-            else:
+            elif layer !="D":
                 last_conv_channels = int(layer)
 
         in_features = last_conv_channels * current_size * current_size
 
         for layer in self.fc_plan:
-            layers.append(nn.Linear(in_features, layer)) 
-            layers.append(nn.ReLU(inplace=True))
-            in_features = layer
+            if layer == "D":
+                layers.append(nn.Dropout(p=0.5))
+            else:
+                layers.append(nn.Linear(in_features, layer)) 
+                layers.append(nn.ReLU(inplace=True))
+                in_features = layer
         
         layers.append(nn.Linear(in_features, self.num_classes))
 
@@ -75,9 +80,16 @@ class ConvNetModel(nn.Module):
         return self.fc_layers(x)
 
 
-class Model1(ConvNetModel):
-    CNN_PLAN = [64, "M", 128, "M", 256, 256, "M", 512, 512, "M"]  # Example CNN plan
+class BaseModel(ConvNetModel):
+    CNN_PLAN = [64, "M", 128, "M", 256, 256, "M", 512, 512]  # Example CNN plan
     FC_PLAN = [4096, 4096]  # Example FC plan
+
+    def __init__(self, **kwargs):
+        super().__init__(self.CNN_PLAN, self.FC_PLAN, **kwargs)
+
+class BaseModel2(ConvNetModel):
+    CNN_PLAN = [64, "M", "D", 128, "M", "D", 256, 256, "M", "D", 512, 512]   # Example CNN plan
+    FC_PLAN = [1024, "D", 1024]  # Example FC plan
 
     def __init__(self, **kwargs):
         super().__init__(self.CNN_PLAN, self.FC_PLAN, **kwargs)
