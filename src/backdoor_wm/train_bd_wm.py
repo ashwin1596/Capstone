@@ -36,7 +36,7 @@ class AddSignatureTransformation:
             y = random.randint(0, h - self.patch_size)
 
             #TODO Need to apply a proper signature here instead of something random
-            #Currently adding a black patch
+            color = [96, 130, 182]
             img_np[y:y+self.patch_size, x:x+self.patch_size] = color
 
         return Image.fromarray(img_np)        
@@ -161,7 +161,7 @@ def evaluate(dataloader, model, loss_fn, metrics_fn, epoch):
 epochs = 3
 loss_fn = nn.CrossEntropyLoss()
 metric_fn = Accuracy(task="multiclass", num_classes=10).to(device)
-model = BaseModel(input_channels=1, num_classes=10, input_size=28).to(device)
+model = BaseModel2(input_channels=3, num_classes=10, input_size=28).to(device)
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
 with mlflow.start_run() as run:
