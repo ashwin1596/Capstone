@@ -228,6 +228,7 @@ model = BaseModel2(input_channels=3, num_classes=100, input_size=32).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
 
+print(model)
 
 with mlflow.start_run() as run:
     params = {
