@@ -2,3 +2,6 @@ __pycache__
 
 data/
 model_summary.txt
+
+*.pth
+*.path
