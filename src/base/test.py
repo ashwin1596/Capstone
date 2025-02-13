@@ -1,5 +1,7 @@
 import os
+import sys
 
+sys.path.append(os.path.abspath(".."))
 from models import BaseModel, BaseModel2
 
 checkpoint_path = "checkpoint/latest_model.pth"  # Change to "best_model.pth" if needed
@@ -15,14 +17,14 @@ from torchvision.transforms import ToTensor
 import mlflow
 
 training_data = datasets.CIFAR10(
-    root="data",
+    root="../data",
     train=True,
     download=True,
     transform=ToTensor(),
 )
 
 test_data = datasets.CIFAR10(
-    root="data",
+    root="../data",
     train=False,
     download=True,
     transform=ToTensor(),
@@ -37,7 +39,7 @@ test_dataloader = DataLoader(test_data, batch_size=64)
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_test_run")
+mlflow.set_experiment("/cifar10_base_train")
 
 # Get cpu or gpu for training.
 device = "cuda" if torch.cuda.is_available() else "cpu"
