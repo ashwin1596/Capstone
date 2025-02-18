@@ -155,7 +155,7 @@ with mlflow.start_run() as run:
     for t in range(start_epoch, epochs):
         print(f"Epoch {t+1}\n-------------------------------")
         train(train_dataloader, model, loss_fn, metric_fn, optimizer, epoch=t)
-        eval_loss, eval_accuracy = evaluate(test_dataloader, model, loss_fn, metric_fn, epoch=0)
+        eval_loss, eval_accuracy = evaluate(test_dataloader, model, loss_fn, metric_fn, epoch=t)
 
         scheduler.step(eval_loss)
 
