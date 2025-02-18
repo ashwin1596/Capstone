@@ -1,0 +1,35 @@
+(cap) ak6913@lovegood:~/Capstone/src/backdoor_wm$ python3 bd_inference.py 
+/usr/lib/python3/dist-packages/requests/__init__.py:89: RequestsDependencyWarning: urllib3 (2.2.3) or chardet (3.0.4) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+Files already downloaded and verified
+Downloading artifacts: 100%|██████████████████| 6/6 [00:00<00:00,  6.29it/s]
+Class 0 - Precision: 0.7821939586645469, Recall: 0.6104218362282878, F1 Score: 0.6857142857142856
+Class 1 - Precision: 0.8047808764940239, Recall: 0.7613065326633166, F1 Score: 0.7824402840542285
+Class 2 - Precision: 0.4839797639123103, Recall: 0.3637515842839037, F1 Score: 0.4153400868306802
+Class 3 - Precision: 0.4107142857142857, Recall: 0.34673366834170855, F1 Score: 0.3760217983651226
+Class 4 - Precision: 0.4699738903394256, Recall: 0.449438202247191, F1 Score: 0.4594767070835992
+Class 5 - Precision: 0.6972477064220184, Recall: 0.287515762925599, F1 Score: 0.40714285714285714
+Class 6 - Precision: 0.36324786324786323, Recall: 0.9503105590062112, F1 Score: 0.5255925798694606
+Class 7 - Precision: 0.8428835489833642, Recall: 0.575031525851198, F1 Score: 0.6836581709145427
+Class 8 - Precision: 0.8174807197943444, Recall: 0.7784577723378213, F1 Score: 0.7974921630094043
+Class 9 - Precision: 0.7101796407185629, Recall: 0.7375621890547264, F1 Score: 0.7236119585112873
+Total Precision: 0.6382682254290746, Total Recall: 0.5860529632939964
+(cap) ak6913@lovegood:~/Capstone/src/backdoor_wm$ cd ..
+(cap) ak6913@lovegood:~/Capstone/src$ cd base/
+(cap) ak6913@lovegood:~/Capstone/src/base$ python3 base_inference.py 
+/usr/lib/python3/dist-packages/requests/__init__.py:89: RequestsDependencyWarning: urllib3 (2.2.3) or chardet (3.0.4) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+Files already downloaded and verified
+Downloading artifacts: 100%|██████████████████| 6/6 [00:00<00:00, 10.63it/s]
+Class 0 - Precision: 0.9026258205689278, Recall: 0.825, F1 Score: 0.8620689655172414
+Class 1 - Precision: 0.948936170212766, Recall: 0.892, F1 Score: 0.9195876288659794
+Class 2 - Precision: 0.7762376237623763, Recall: 0.784, F1 Score: 0.7800995024875622
+Class 3 - Precision: 0.6918304033092038, Recall: 0.669, F1 Score: 0.6802236908998476
+Class 4 - Precision: 0.761180679785331, Recall: 0.851, F1 Score: 0.8035882908404154
+Class 5 - Precision: 0.8053993250843644, Recall: 0.716, F1 Score: 0.7580730545262042
+Class 6 - Precision: 0.7689144736842105, Recall: 0.935, F1 Score: 0.8438628158844764
+Class 7 - Precision: 0.9145021645021645, Recall: 0.845, F1 Score: 0.8783783783783783
+Class 8 - Precision: 0.8947368421052632, Recall: 0.935, F1 Score: 0.9144254278728606
+Class 9 - Precision: 0.9181166837256909, Recall: 0.897, F1 Score: 0.9074355083459787
+Total Precision: 0.8382480186740299, Total Recall: 0.8349
+(cap) ak6913@lovegood:~/Capstone/src/base$ 

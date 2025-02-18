@@ -94,3 +94,9 @@ class BaseModel2(ConvNetModel):
     def __init__(self, **kwargs):
         super().__init__(self.CNN_PLAN, self.FC_PLAN, **kwargs)
 
+class StudentModel(ConvNetModel):
+    CNN_PLAN = [32, "M", "D", 64, 64, "M", "D", 128, 128]  # Example CNN plan
+    FC_PLAN = [512, "D", 512]  # Example FC plan
+
+    def __init__(self, **kwargs):
+        super().__init__(self.CNN_PLAN, self.FC_PLAN, **kwargs)
