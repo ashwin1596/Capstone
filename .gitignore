@@ -1,7 +1,11 @@
 __pycache__
 
+mlruns/
+
 data/
 model_summary.txt
 
 *.pth
 *.path
+
+*.csv

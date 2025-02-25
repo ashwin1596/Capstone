@@ -38,7 +38,7 @@ mlflow.set_tracking_uri("http://localhost:5000")
 
 mlflow.set_experiment("/cifar10_base_train_v2")
 
-logged_model = "runs:/0760bd27e4cb4296bf20dd0efb9fc2f9/model"
+logged_model = "runs:/7cd61c4244c7428c9f156df162a443f7/model"
 loaded_model = mlflow.pytorch.load_model(logged_model)
 
 # CIFAR-10 has 10 classes 0-9

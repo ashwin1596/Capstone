@@ -1,18 +1,7 @@
-import os
-import sys
-
-sys.path.append(os.path.abspath(".."))
-from models import BaseModel, BaseModel2
-
-checkpoint_dir = "checkpoints"
-latest_checkpoint = os.path.join(checkpoint_dir, "latest_model.pth")
-best_checkpoint = os.path.join(checkpoint_dir, "best_model.pth")
-
-# Ensure checkpoint directory exists
-os.makedirs(checkpoint_dir, exist_ok=True)
-
 import torch
 from torch import nn
+import torch.nn.utils.prune as prune
+
 from torch.utils.data import DataLoader
 from torchinfo import summary
 from torchmetrics import Accuracy
@@ -20,15 +9,28 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor, Normalize
 import torchvision.transforms as transforms
 
-import numpy as np
-
 import mlflow
-from mlflow.types import Schema, TensorSpec
-from mlflow.models import ModelSignature
+
+import os
+import sys
+
+sys.path.append(os.path.abspath(".."))
+from models import BaseModel, BaseModel2
+
+checkpoint_dir = "fine_tuning_checkpoints"
+latest_checkpoint = os.path.join(checkpoint_dir, "latest_model.pth")
+best_checkpoint = os.path.join(checkpoint_dir, "best_model.pth")
+
+# Ensure checkpoint directory exists
+os.makedirs(checkpoint_dir, exist_ok=True)
+
+# Get cpu or gpu for training.
+device = "cuda:3" if torch.cuda.is_available() else "cpu"
 
 # Define the normalization transform
 normalize_transform = Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
 
+# Load the dataset with custom transformation
 transform = transforms.Compose([
     ToTensor(),
     normalize_transform
@@ -48,29 +50,55 @@ test_data = datasets.CIFAR10(
     transform=transform,
 )
 
-
 # Split the training data into a training and validation dataset.
 train_size = int(0.8 * len(training_data))
 val_size = len(training_data) - train_size
 training_data, val_data = torch.utils.data.random_split(training_data, [train_size, val_size])
 
-
-# print(f"Image size: {training_data[0][0].shape}")
-# print(f"Size of training dataset: {len(training_data)}")
-# print(f"Size of test dataset: {len(test_data)}")
-
 train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
 val_dataloader = DataLoader(val_data, batch_size=64, shuffle=False)
 test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
 
-mlflow.set_tracking_uri("http://localhost:5000")
+def prune_model(model, parameter):
+    
+    for module in model.modules():
+        if isinstance(module, nn.Conv2d):
+            prune.l1_unstructured(module, name=parameter, amount=0.2)
+            prune.remove(module, name=parameter)
+        elif isinstance(module, nn.Linear):
+            prune.l1_unstructured(module, name=parameter, amount=0.4)
+            prune.remove(module, name=parameter)
 
-mlflow.set_experiment("/cifar10_base_train_v2")
+def evaluate(dataloader, model, loss_fn, metrics_fn, epoch, phase="Validation"):
+    """Evaluate the model on a single pass of the dataloader.
 
-# Get cpu or gpu for training.
-device = "cuda" if torch.cuda.is_available() else "cpu"
+    Args:
+        dataloader: an instance of `torch.utils.data.DataLoader`, containing the eval data.
+        model: an instance of `torch.nn.Module`, the model to be trained.
+        loss_fn: a callable, the loss function.
+        metrics_fn: a callable, the metrics function.
+        epoch: an integer, the current epoch number.
+    """
+    num_batches = len(dataloader)
+    model.eval()
+    eval_loss, eval_accuracy = 0, 0
+    with torch.no_grad():
+        for X, y in dataloader:
+            X, y = X.to(device), y.to(device)
+            pred = model(X)
+            eval_loss += loss_fn(pred, y).item()
+            eval_accuracy += metrics_fn(pred, y)
 
-def load_checkpoint(model, optimizer, scheduler, checkpoint_path, device="cuda" if torch.cuda.is_available() else "cpu"):
+    eval_loss /= num_batches
+    eval_accuracy /= num_batches
+    mlflow.log_metric(f"{phase.lower()}_loss", f"{eval_loss:2f}", step=epoch)
+    mlflow.log_metric(f"{phase.lower()}_accuracy", f"{eval_accuracy:2f}", step=epoch)
+
+    print(f"{phase} metrics: \nAccuracy: {eval_accuracy:.2f}, Avg loss: {eval_loss:2f} \n")
+
+    return eval_loss, eval_accuracy
+
+def load_checkpoint(model, optimizer, scheduler, checkpoint_path, device="cuda:3" if torch.cuda.is_available() else "cpu"):
     """Loads model, optimizer, and scheduler states from a checkpoint file."""
 
     try:
@@ -86,6 +114,8 @@ def load_checkpoint(model, optimizer, scheduler, checkpoint_path, device="cuda" 
 
 
     model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
+
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
     start_epoch = checkpoint["epoch"] + 1  # Resume from the next epoch
@@ -125,81 +155,40 @@ def train(dataloader, model, loss_fn, metrics_fn, optimizer, epoch):
             mlflow.log_metric("accuracy", f"{accuracy:2f}", step=step)
             print(f"loss: {loss:2f} accuracy: {accuracy:2f} [{current} / {len(dataloader)}]")
 
-def evaluate(dataloader, model, loss_fn, metrics_fn, epoch, phase="Validation"):
-    """Evaluate the model on a single pass of the dataloader.
+mlflow.set_tracking_uri("http://localhost:5000")
 
-    Args:
-        dataloader: an instance of `torch.utils.data.DataLoader`, containing the eval data.
-        model: an instance of `torch.nn.Module`, the model to be trained.
-        loss_fn: a callable, the loss function.
-        metrics_fn: a callable, the metrics function.
-        epoch: an integer, the current epoch number.
-    """
-    num_batches = len(dataloader)
-    model.eval()
-    eval_loss, eval_accuracy = 0, 0
-    with torch.no_grad():
-        for X, y in dataloader:
-            X, y = X.to(device), y.to(device)
-            pred = model(X)
-            eval_loss += loss_fn(pred, y).item()
-            eval_accuracy += metrics_fn(pred, y)
-
-    eval_loss /= num_batches
-    eval_accuracy /= num_batches
-    mlflow.log_metric(f"{phase.lower()}_loss", f"{eval_loss:2f}", step=epoch)
-    mlflow.log_metric(f"{phase.lower()}_accuracy", f"{eval_accuracy:2f}", step=epoch)
-
-    print(f"{phase} metrics: \nAccuracy: {eval_accuracy:.2f}, Avg loss: {eval_loss:2f} \n")
-
-    return eval_loss, eval_accuracy
-
-epochs = 200
-loss_fn = nn.CrossEntropyLoss()
-metric_fn = Accuracy(task="multiclass", num_classes=10).to(device)
-model = BaseModel2(input_channels=3, num_classes=10, input_size=32).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
-
-signature = ModelSignature(
-    inputs=Schema([TensorSpec(shape=(None, 3, 32, 32), type=np.dtype("float32"))]),
-    outputs=Schema([TensorSpec(shape=(None, 10), type=np.dtype("float32"))])
-)
-
-best_model_state_dict = None
+mlflow.set_experiment("/cifar10_bd_wm_train_v4")
 
 with mlflow.start_run() as run:
-    params = {
-        "epochs": epochs,
-        "learning_rate": 1e-3,
-        "batch_size": 64,
-        "loss_function": loss_fn.__class__.__name__,
-        "metric_function": metric_fn.__class__.__name__,
-        "optimizer": "Adam",
-    }
-    # Log training parameters.
-    mlflow.log_params(params)
+    mlflow.run_name = "Pruning and Fine-tuning"
 
-    # Log model summary.
-    with open("model_summary.txt", "w") as f:
-        f.write(str(summary(model)))
-    mlflow.log_artifact("model_summary.txt")
+    # Load the model 
+    logged_model = "runs:/e1212adaefac4e5c8452bdb6d0c6a5a0/best_model"
+    loaded_model = mlflow.pytorch.load_model(logged_model)
+    loaded_model.to(device)
+
+    # Prune the model
+    prune_model(loaded_model, "weight")
+
+    # Log the pruned model
+    mlflow.pytorch.log_model(loaded_model, "pruned_model")
+
+    print("Model pruned successfully!")
+
+    # Fine-tune the pruned model
+    epochs = 20
+    loss_fn = nn.CrossEntropyLoss()
+    metric_fn = Accuracy(task="multiclass", num_classes=10).to(device)
+    optimizer = torch.optim.Adam(loaded_model.parameters(), lr=1e-3)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
 
     start_epoch = 0  # Default starting epoch
     best_val_loss = float("inf")  # Default best evaluation loss
 
-    if os.path.exists(best_checkpoint):  
-        print(f"Loading best model from '{best_checkpoint}'...")
-        start_epoch, best_eval_loss = load_checkpoint(model, optimizer, scheduler, best_checkpoint)
-    elif os.path.exists(latest_checkpoint):
-        print(f"Loading latest model from '{latest_checkpoint}'...")
-        start_epoch, _ = load_checkpoint(model, optimizer, scheduler, latest_checkpoint)
-
-
     for t in range(start_epoch, epochs):
         print(f"Epoch {t+1}\n-------------------------------")
-        train(train_dataloader, model, loss_fn, metric_fn, optimizer, epoch=t)
-        val_loss, val_accuracy = evaluate(val_dataloader, model, loss_fn, metric_fn, epoch=t, phase="Validation")
+        train(train_dataloader, loaded_model, loss_fn, metric_fn, optimizer, epoch=t)
+        val_loss, val_accuracy = evaluate(val_dataloader, loaded_model, loss_fn, metric_fn, epoch=t)
 
         scheduler.step(val_loss)
 
@@ -208,10 +197,10 @@ with mlflow.start_run() as run:
         mlflow.log_metric("learning_rate", current_lr, step=t)
 
         # save latest model
-        latest_checkpoint = "checkpoints/latest_model.pth"
+        latest_checkpoint = "fine_tuning_checkpoints/latest_model.pth"
         torch.save({
             "epoch": t,
-            "model_state_dict": model.state_dict(),
+            "model_state_dict": loaded_model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict(),
             "loss": val_loss
@@ -220,10 +209,10 @@ with mlflow.start_run() as run:
         # save the best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_checkpoint = "checkpoints/best_model.pth"
+            best_checkpoint = "fine_tuning_checkpoints/best_model.pth"
             torch.save({
                 "epoch": t,
-                "model_state_dict": model.state_dict(),
+                "model_state_dict": loaded_model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
                 "loss": val_loss
@@ -236,15 +225,12 @@ with mlflow.start_run() as run:
             mlflow.log_artifact(best_checkpoint)
 
             # Save the best model state dict
-            best_model_state_dict = model.state_dict()
+            best_model_state_dict = loaded_model.state_dict()
 
 
-    # Evaluate the best model on the test dataset
-    test_loss, test_accuracy = evaluate(test_dataloader, model, loss_fn, metric_fn, epoch=epochs, phase="Test")
+# Evaluate the best model on the test dataset
+test_loss, test_accuracy = evaluate(test_dataloader, loaded_model, loss_fn, metric_fn, epoch=epochs, phase="Test")
 
-    if best_model_state_dict is not None:
-        model.load_state_dict(best_model_state_dict)
-        mlflow.pytorch.log_model(model, "model", signature=signature)
-    # Save the trained model to MLflow.
-    # mlflow.pytorch.log_model(best_checkpoint, "model", signature=signature)
-    # mlflow.pytorch.log_model(model, "model", signature=signature)
+if best_model_state_dict is not None:
+    loaded_model.load_state_dict(best_model_state_dict)
+    mlflow.pytorch.log_model(loaded_model, "finetuned_model")
