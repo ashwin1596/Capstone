@@ -157,11 +157,13 @@ def train(dataloader, model, loss_fn, metrics_fn, optimizer, epoch):
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_bd_wm_train_v3_10classes")
+mlflow.set_experiment("/cifar10_bd_wm_train_v4")
 
 with mlflow.start_run() as run:
+    mlflow.run_name = "Pruning and Fine-tuning"
+
     # Load the model 
-    logged_model = "runs:/b9d19a91c8b2457f867986335673bfa2/model"
+    logged_model = "runs:/e1212adaefac4e5c8452bdb6d0c6a5a0/best_model"
     loaded_model = mlflow.pytorch.load_model(logged_model)
     loaded_model.to(device)
 
@@ -170,6 +172,8 @@ with mlflow.start_run() as run:
 
     # Log the pruned model
     mlflow.pytorch.log_model(loaded_model, "pruned_model")
+
+    print("Model pruned successfully!")
 
     # Fine-tune the pruned model
     epochs = 20
@@ -229,4 +233,4 @@ test_loss, test_accuracy = evaluate(test_dataloader, loaded_model, loss_fn, metr
 
 if best_model_state_dict is not None:
     loaded_model.load_state_dict(best_model_state_dict)
-    mlflow.pytorch.log_model(loaded_model, "finetuned_model", signature=signature)
+    mlflow.pytorch.log_model(loaded_model, "finetuned_model")

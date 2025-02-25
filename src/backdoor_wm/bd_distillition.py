@@ -176,7 +176,7 @@ def evaluate(teacher_model, student_model, dataloader, loss_fn, metrics_fn, epoc
 
     return eval_loss, eval_accuracy
 
-epochs = 10
+epochs = 50
 alpha=0.5 
 temperature=2.0
 loss_fn = DistillationLoss(alpha=alpha, temperature=temperature)
@@ -194,11 +194,11 @@ best_model_state_dict = None
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_bd_wm_train_v3_10classes")
+mlflow.set_experiment("/cifar10_bd_wm_train_v4")
 
 with mlflow.start_run() as run:
     # Load the model 
-    logged_model = "runs:/b9d19a91c8b2457f867986335673bfa2/model"
+    logged_model = "runs:/e1212adaefac4e5c8452bdb6d0c6a5a0/best_model"
     loaded_model = mlflow.pytorch.load_model(logged_model)
     teacher_model = loaded_model.to(device)
 
@@ -225,10 +225,10 @@ with mlflow.start_run() as run:
 
     if os.path.exists(best_checkpoint):  
         print(f"Loading best model from '{best_checkpoint}'...")
-        start_epoch, best_eval_loss = load_checkpoint(model, optimizer, scheduler, best_checkpoint)
+        start_epoch, best_eval_loss = load_checkpoint(student_model, optimizer, scheduler, best_checkpoint)
     elif os.path.exists(latest_checkpoint):
         print(f"Loading latest model from '{latest_checkpoint}'...")
-        start_epoch, _ = load_checkpoint(model, optimizer, scheduler, latest_checkpoint)
+        start_epoch, _ = load_checkpoint(student_model, optimizer, scheduler, latest_checkpoint)
 
 
     for t in range(start_epoch, epochs):
@@ -246,7 +246,7 @@ with mlflow.start_run() as run:
         latest_checkpoint = "distillation_checkpoints/latest_model.pth"
         torch.save({
             "epoch": t,
-            "model_state_dict": model.state_dict(),
+            "model_state_dict": student_model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict(),
             "loss": val_loss
@@ -258,7 +258,7 @@ with mlflow.start_run() as run:
             best_checkpoint = "distillation_checkpoints/best_model.pth"
             torch.save({
                 "epoch": t,
-                "model_state_dict": model.state_dict(),
+                "model_state_dict": student_model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
                 "loss": val_loss
@@ -271,12 +271,12 @@ with mlflow.start_run() as run:
             mlflow.log_artifact(best_checkpoint)
 
             # Save the best model state dict
-            best_model_state_dict = model.state_dict()
+            best_model_state_dict = student_model.state_dict()
 
 
     # Evaluate the best model on the test dataset
     test_loss, test_accuracy = evaluate(teacher_model, student_model, test_dataloader, loss_fn, metric_fn, epoch=epochs, phase="Test")
 
     if best_model_state_dict is not None:
-        model.load_state_dict(best_model_state_dict)
-        mlflow.pytorch.log_model(model, "distilled_model", signature=signature)
+        student_model.load_state_dict(best_model_state_dict)
+        mlflow.pytorch.log_model(student_model, "distilled_model", signature=signature)
