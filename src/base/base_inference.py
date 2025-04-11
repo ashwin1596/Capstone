@@ -4,6 +4,12 @@ import sys
 sys.path.append(os.path.abspath(".."))
 from models import BaseModel, BaseModel2
 
+results = "eval_results"
+gen_inf_res = os.path.join(results, "bd_inference_general_results.csv")
+
+# Ensure checkpoint directory exists
+os.makedirs(results, exist_ok=True)
+
 import mlflow
 import numpy as np
 
@@ -15,7 +21,17 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor, Normalize
 import torchvision.transforms as transforms
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda:2" if torch.cuda.is_available() else "cpu"
+
+import pandas as pd
+
+# eval results store
+data = {
+    "Class": list(range(10)) + ["Total"],
+    "Precision": [0.0] * 11,
+    "Recall": [0.0] * 11,
+    "F1 Score": [0.0] * 11
+}
 
 # Define the normalization transform
 normalize_transform = Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
@@ -36,9 +52,9 @@ test_dataloader = DataLoader(test_data, batch_size=64)
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_base_train_v2")
+mlflow.set_experiment("/cifar10_base")
 
-logged_model = "runs:/7cd61c4244c7428c9f156df162a443f7/model"
+logged_model = "runs:/45223751521443f5aee00de2c39ef3ca/model"
 loaded_model = mlflow.pytorch.load_model(logged_model)
 
 # CIFAR-10 has 10 classes 0-9
@@ -85,14 +101,32 @@ with torch.no_grad():
         # precision = TP / (TP + FP)
         precision = true_positives[i] / (true_positives[i] + false_positives[i])
         total_precision += precision
+        data["Precision"][i] = precision
 
         # recall = TP / (TP + FN)
         recall = true_positives[i] / (true_positives[i] + false_negatives[i])
         total_recall += recall
+        data["Recall"][i] = recall
 
         # f1 = 2 * (precision * recall) / (precision + recall)
         f1 = 2 * (precision * recall) / (precision + recall)
+        data["F1 Score"][i] = f1
 
         print(f"Class {i} - Precision: {precision}, Recall: {recall}, F1 Score: {f1}")
 
-    print(f"Total Precision: {total_precision / num_classes}, Total Recall: {total_recall / num_classes}")
+        # Total precision and recall
+    data["Precision"][-1] = total_precision / num_classes
+    data["Recall"][-1] = total_recall / num_classes
+    print(f"Total Precision: {data['Precision'][-1]}, Total Recall: {data['Recall'][-1]}")
+    # Total F1 Score
+    total_f1 = 2 * (data["Precision"][-1] * data["Recall"][-1]) / (data["Precision"][-1] + data["Recall"][-1])
+    data["F1 Score"][-1] = total_f1
+    print(f"Total F1 Score: {total_f1}")
+
+# Create a DataFrame from the data
+df = pd.DataFrame(data)
+
+# Save the DataFrame to a CSV file
+df.to_csv(gen_inf_res, index=False)
+
+print("Results saved to eval_res/bd_inference_general_results.csv")

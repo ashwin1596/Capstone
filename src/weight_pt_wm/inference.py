@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(".."))
 from models import BaseModel, BaseModel2
 
 results = "eval_results"
-gen_inf_res = os.path.join(results, "bd_inference_trigger_results.csv")
+gen_inf_res = os.path.join(results, "bd_inference_general_results.csv")
 
 # Ensure checkpoint directory exists
 os.makedirs(results, exist_ok=True)
@@ -158,27 +158,16 @@ def create_dataloaders(batch_size=64, modify_fraction=0.1):
 # Create dataloaders with balanced modifications
 test_dataloader = create_dataloaders(
     batch_size=64,
-    modify_fraction=1.0
+    modify_fraction=0.0
 )
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-# mlflow.set_experiment("/cifar10_bd_wm_train_3colorsPatch")
-# logged_model = "runs:/134fc1cc87194f2790c64f4eaf933440/pruned_model"
-# logged_model = "runs:/e1212adaefac4e5c8452bdb6d0c6a5a0/best_model"
-# logged_model = "runs:/926165c81b8048d1bde15683da7c2874/distilled_model"
+mlflow.set_experiment("/cifar10_base")
 
-mlflow.set_experiment("/cifar10_bd_wm_train_randomColorPatches")
-# logged_model = "runs:/7117b3a728634c07a8597edd063fe11b/pruned_model"
-# logged_model = "runs:/3616a43f89da4a249ba8918a04342392/best_model"
-# logged_model = "runs:/61ceda9a758743c8aa3edaa3fb47867e/finetuned_model"
-logged_model = "runs:/3b497a21a9e849cebb24cda37b25a41d/distilled_model"
-
-# mlflow.set_experiment("/cifar10_bd_wm_train_randomColorPatches")
-
-# logged_model = "runs:/3616a43f89da4a249ba8918a04342392/best_model"
-# # logged_model = "runs:/61ceda9a758743c8aa3edaa3fb47867e/finetuned_model"
-# # logged_model = "runs:/3b497a21a9e849cebb24cda37b25a41d/distilled_model"
+logged_model = "runs:/c397af61a27a4010bf736c6a98086c84/pruned_model"
+# logged_model = "runs:/8df935436f894cf091fec05a023a2ccb/distilled_model"
+# logged_model = "runs:/0481ae63d3984952b7bfd6ebaf74beb5/weight_pt_wm_model"
 loaded_model = mlflow.pytorch.load_model(logged_model)
 loaded_model.to(device)
 loaded_model.eval()
@@ -245,6 +234,10 @@ with torch.no_grad():
     data["Precision"][-1] = total_precision / num_classes
     data["Recall"][-1] = total_recall / num_classes
     print(f"Total Precision: {data['Precision'][-1]}, Total Recall: {data['Recall'][-1]}")
+    # Total F1 Score
+    total_f1 = 2 * (data["Precision"][-1] * data["Recall"][-1]) / (data["Precision"][-1] + data["Recall"][-1])
+    data["F1 Score"][-1] = total_f1
+    print(f"Total F1 Score: {total_f1}")
 
 # Create a DataFrame from the data
 df = pd.DataFrame(data)
@@ -252,4 +245,4 @@ df = pd.DataFrame(data)
 # Save the DataFrame to a CSV file
 df.to_csv(gen_inf_res, index=False)
 
-print("Results saved to eval_res/bd_inference_trigger_results.csv")
+print("Results saved to eval_res/bd_inference_results.csv")

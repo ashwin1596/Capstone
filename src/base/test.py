@@ -65,12 +65,12 @@ test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_base_train_v2")
+mlflow.set_experiment("/cifar10_base")
 
 # Get cpu or gpu for training.
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda:2" if torch.cuda.is_available() else "cpu"
 
-def load_checkpoint(model, optimizer, scheduler, checkpoint_path, device="cuda" if torch.cuda.is_available() else "cpu"):
+def load_checkpoint(model, optimizer, scheduler, checkpoint_path, device):
     """Loads model, optimizer, and scheduler states from a checkpoint file."""
 
     try:
