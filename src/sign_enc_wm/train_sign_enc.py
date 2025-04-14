@@ -2,7 +2,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(".."))
-from models import BaseModel, BaseModel2
+from passport_model import PassportModel
 
 checkpoint_dir = "checkpoints"
 latest_checkpoint = os.path.join(checkpoint_dir, "latest_model.pth")
@@ -26,173 +26,11 @@ from mlflow.models import ModelSignature
 
 import random
 import numpy as np
-# from PIL import Image
+
+from verify import verify
 
 # Define the normalization transform
 normalize_transform = Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
-
-# # Ensure reproducibility
-# random.seed(2558)
-# torch.manual_seed(4588)
-
-# from torchvision.transforms.functional import to_pil_image
-
-# class AddSignatureTransformation:
-#     """
-#     Improved signature transformation with better randomization and consistency
-#     """
-#     def __init__(self, patch_size=6, num_patches=1, signature_colors=None):
-#         self.patch_size = patch_size
-#         self.num_patches = num_patches
-    
-#     def __call__(self, img):
-#         img_np = np.array(img)
-#         c, h, w = img_np.shape
-        
-#         # Select random color from signature colors
-#         color = np.random.randint(0, 255, size=3, dtype=np.uint8)
-
-#         # Ensure patch doesn't overlap with image edges
-#         margin = 2
-#         for _ in range(self.num_patches):
-#             x = random.randint(margin, w - self.patch_size - margin)
-#             y = random.randint(margin, h - self.patch_size - margin)
-            
-#             # Add slight random noise to signature for variety
-#             noise = np.random.randint(-10, 10, size=3, dtype=np.int16)
-#             final_color = np.clip(color + noise, 0, 255).astype(np.uint8)
-            
-#             img_np[:, y:y+self.patch_size, x:x+self.patch_size] = final_color[:, None, None]
-        
-#         return torch.from_numpy(img_np)
-
-# class BalancedCIFAR10(datasets.CIFAR10):
-#     """
-#     Improved CIFAR10 wrapper with balanced modification and additional augmentation
-#     """
-#     def __init__(self, root, train=True, download=True, transform=None, modify_fraction=0.1):
-#         super().__init__(root=root, train=train, download=download, transform=None)
-#         self.modify_fraction = modify_fraction
-#         self.modified_indices = None
-        
-#         # Store the transforms separately
-#         self.to_tensor_transform = transform.transforms[0]  # ToTensor
-#         self.add_sign_transform = transform.transforms[1]   # AddSignatureTransformation
-#         self.normalize_transform = transform.transforms[2]  # Normalize
-
-#         # Ensure even distribution across classes
-#         self.modified_indices = self._get_balanced_indices()
-
-#         print(f"Number of modified indices: {len(self.modified_indices)}")
-
-#         self.train = train
-
-#     def _get_balanced_indices(self):
-#         # Get indices for each class
-#         class_indices = [[] for _ in range(10)]
-#         for idx, (_, label) in enumerate(self):
-#             class_indices[label].append(idx)
-            
-#         # Select equal number of samples from each class
-#         modified_indices = set()
-#         samples_per_class = int((len(self) * self.modify_fraction) / 10)
-        
-#         for class_idx in range(10):
-#             indices = random.sample(class_indices[class_idx], samples_per_class)
-#             modified_indices.update(indices)
-            
-#         return modified_indices
-
-#     def __getitem__(self, index):
-#         img, label = super().__getitem__(index)
-        
-#         # Convert to tensor
-#         img = self.to_tensor_transform(img)
-        
-#         if self.modified_indices and index in self.modified_indices:
-#             img = self.add_sign_transform(img)
-#             label = self.custom_label()
-
-#         img = self.normalize_transform(img)
-#         return img, label
-
-#     def custom_label(self):
-#         return 7
-
-# # Enhanced training data setup
-# def create_dataloaders(batch_size=64, modify_fraction=0.1):
-#     transform = transforms.Compose([
-#         ToTensor(),
-#         AddSignatureTransformation(patch_size=6, num_patches=1),
-#         Normalize(mean=[0.4914, 0.4822, 0.4465], 
-#                  std=[0.2023, 0.1994, 0.2010])
-#     ])
-
-#     trigger_training_data = BalancedCIFAR10(
-#         root="../data",
-#         train=True,
-#         download=True,
-#         transform=transform,
-#         modify_fraction=modify_fraction
-#     )
-
-#     trigger_test_data = BalancedCIFAR10(
-#         root="../data",
-#         train=False,
-#         download=True,
-#         transform=transform,
-#         modify_fraction=modify_fraction
-#     )
-
-#     no_trigger_training_data = BalancedCIFAR10(
-#         root="../data",
-#         train=True,
-#         download=True,
-#         transform=transform,
-#         modify_fraction=0
-#     )
-
-#     no_trigger_test_data = BalancedCIFAR10(
-#         root="../data",
-#         train=False,
-#         download=True,
-#         transform=transform,
-#         modify_fraction=0
-#     )
-
-#     # Create stratified split for validation
-#     train_size = int(0.8 * len(training_data))
-#     val_size = len(training_data) - train_size
-    
-#     # Use random_split with generator for reproducibility
-#     generator = torch.Generator().manual_seed(42)
-#     trigger_training_data, trigger_val_data = torch.utils.data.random_split(
-#         trigger_training_data, [train_size, val_size], generator=generator
-#     )
-
-#     no_trigger_training_data, no_trigger_val_data = torch.utils.data.random_split(
-#         no_trigger_training_data, [train_size, val_size], generator=generator
-#     )
-
-#     trigger_train_dataloader = DataLoader(trigger_training_data, batch_size=batch_size, shuffle=True)
-#     trigger_val_dataloader = DataLoader(trigger_val_data, batch_size=batch_size, shuffle=False)
-#     trigger_test_dataloader = DataLoader(trigger_test_data, batch_size=batch_size, shuffle=False)
-
-#     no_trigger_train_dataloader = DataLoader(no_trigger_training_data, batch_size=batch_size, shuffle=True)
-#     no_trigger_val_dataloader = DataLoader(no_trigger_val_data, batch_size=batch_size, shuffle=False)
-#     no_trigger_test_dataloader = DataLoader(no_trigger_test_data, batch_size=batch_size, shuffle=False)
-
-#     return trigger_train_dataloader, trigger_val_dataloader, trigger_test_dataloader, no_trigger_train_dataloader, no_trigger_val_dataloader, no_trigger_test_dataloader
-
-# # train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
-# # val_dataloader = DataLoader(val_data, batch_size=64, shuffle=False)
-# # test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
-
-# # Create dataloaders with balanced modifications
-# trigger_train_dataloader, trigger_val_dataloader, trigger_test_dataloader, no_trigger_train_dataloader, no_trigger_val_dataloader, no_trigger_test_dataloader = create_dataloaders(
-#     batch_size=64,
-#     modify_fraction=0.1
-# )
 
 transform = transforms.Compose([
     ToTensor(),
@@ -219,18 +57,13 @@ train_size = int(0.8 * len(training_data))
 val_size = len(training_data) - train_size
 training_data, val_data = torch.utils.data.random_split(training_data, [train_size, val_size])
 
-
-# print(f"Image size: {training_data[0][0].shape}")
-# print(f"Size of training dataset: {len(training_data)}")
-# print(f"Size of test dataset: {len(test_data)}")
-
 train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
 val_dataloader = DataLoader(val_data, batch_size=64, shuffle=False)
 test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_bd_wm_train_randomColorPatches")
+mlflow.set_experiment("/cifar10_sig_enc_wm_verification")
 
 # Get cpu or gpu for training.
 device = "cuda:2" if torch.cuda.is_available() else "cpu"
@@ -241,7 +74,9 @@ class SignLoss(nn.Module):
         self.theta = theta
     
     def forward(self, scale_factors, sign_targets):
-        sign_loss = torch.mean(torch.clamp(-scale_factors * sign_targets + self.theta, min=0))
+        scale_factors = torch.cat(scale_factors)
+        sign_targets = torch.cat(sign_targets)
+        sign_loss = torch.mean(torch.clamp(-1* scale_factors * sign_targets + self.theta, min=0))
 
         return sign_loss
 
@@ -313,20 +148,26 @@ class PassportLoss(nn.Module):
         }
 
 class PassportGenerator:
-    def __init__(self, seed=42, feature_sizes = [64, 128, 256, 256, 512, 512]):
+    def __init__(self, seed=42, conv_shapes=[(64, 3), (128, 64), (256, 128), (256, 256), (512, 256), (512, 512)]):
         self.seed = seed
-        self.feature_sizes = feature_sizes
+        self.conv_shapes = conv_shapes
         self.generator = torch.Generator()
         self.generator.manual_seed(seed)
 
     def generate_passport(self):
+        input_channels = 3
+        kernel_size = 3
         passports=[]
         target_signs=[] # for sign_loss calculation
-        for size in self.feature_sizes:
-            passport_scale = torch.randn(size, size, generator=self.generator)
-            passport_bias = torch.randn(size, size, generator=self.generator)
+        for out_channels, in_channels in self.conv_shapes:
+            # print("Passport shape: ", out_channels, in_channels, kernel_size, kernel_size)
+            passport_dim = in_channels * kernel_size * kernel_size
+            passport_scale = torch.randn(out_channels, passport_dim, generator=self.generator)
+            passport_bias = torch.randn(out_channels, passport_dim, generator=self.generator)
+            # passport_scale = torch.randn(size, size, generator=self.generator)
+            # passport_bias = torch.randn(size, size, generator=self.generator)
 
-            sign = torch.randint(0, 2, (size,), generator=self.generator) * 2 - 1  # {0,1} → {-1,1}
+            sign = torch.randint(0, 2, (out_channels,), generator=self.generator) * 2 - 1  # {0,1} → {-1,1}
 
             passports.append((passport_scale, passport_bias))
             target_signs.append(sign)  # Store the sign for each passport scale factor
@@ -389,39 +230,84 @@ def train(dataloader, model, loss_fn, metrics_fn, optimizer, passports, sign_tar
             mlflow.log_metric("accuracy", f"{accuracy:2f}", step=step)
             print(f"loss: {loss:2f} accuracy: {accuracy:2f} [{current} / {len(dataloader)}]")
 
-# def train(no_trigger_dataloader, trigger_dataloader, model, loss_fn, metrics_fn, optimizer, passports, sign_targets, epoch):
-#     """Train the model on a single pass of the dataloader.
+
+# def evaluate(dataloader, model, loss_fn, metrics_fn, epoch, passports=None, forged_passports=None, phase="Validation"):
+#     """Evaluate the model on a single pass of the dataloader.
 
 #     Args:
-#         dataloader: an instance of `torch.utils.data.DataLoader`, containing the training data.
+#         dataloader: an instance of `torch.utils.data.DataLoader`, containing the eval data.
 #         model: an instance of `torch.nn.Module`, the model to be trained.
 #         loss_fn: a callable, the loss function.
 #         metrics_fn: a callable, the metrics function.
-#         optimizer: an instance of `torch.optim.Optimizer`, the optimizer used for training.
+#         passports: legitimate passport parameters for verification mode.
+#         forged_passports: optional forged passport parameters to test robustness.
 #         epoch: an integer, the current epoch number.
 #     """
-#     model.train()
-#     for batch, ((X, y), (trigger_x, trigger_targets)) in enumerate(zip(no_trigger_dataloader, trigger_dataloader)):
-#         X, y = X.to(device), y.to(device)
-#         trigger_x, trigger_targets = trigger_x.to(device), trigger_targets.to(device)
+#     num_batches = len(dataloader)
+#     model.eval()
 
-#         loss, loss_details, output_standard = model.train_step(X, y, passports, criterion, trigger_x, trigger_targets, sign_targets)
+#     # Metrics for standard evaluation (without passports)
+#     standard_loss, standard_accuracy = 0, 0
 
-#         accuracy = metrics_fn(pred, y)
+#     # Metrics for legitimate passport evaluation
+#     passport_loss, passport_accuracy = 0, 0
 
-#         # Backpropagation.
-#         loss.backward()
-#         optimizer.step()
-#         optimizer.zero_grad()
+#     # Metrics for forged passport evaluation (if provided)
+#     forged_loss, forged_accuracy = 0, 0
+    
+#     with torch.no_grad():
+#         for X, y in dataloader:
+#             X, y = X.to(device), y.to(device)
 
-#         if batch % 100 == 0:
-#             loss, current = loss.item(), batch
-#             step = batch // 100 * (epoch + 1)
-#             mlflow.log_metric("loss", f"{loss:2f}", step=step)
-#             mlflow.log_metric("accuracy", f"{accuracy:2f}", step=step)
-#             print(f"loss: {loss:2f} accuracy: {accuracy:2f} [{current} / {len(dataloader)}]")
+#             # 1. Standard forward pass (No passport)
+#             pred_standard, _ = model(X)
+#             standard_loss += loss_fn(pred_standard, y)[0]
+#             standard_accuracy += metrics_fn(pred_standard, y)
 
-def evaluate(dataloader, model, loss_fn, metrics_fn, epoch, passports=None, forged_passports=None, phase="Validation"):
+#             # 2. Forward pass with legitimate passports
+#             if passports is not None:
+#                 pred_passport, _ = model(X, passports=passports, verification_mode=True)
+#                 passport_loss += loss_fn(pred_passport, y)[0]
+#                 passport_accuracy += metrics_fn(pred_passport, y)
+
+#             # 3. Forward pass with forged passports (if provided)
+#             if forged_passports is not None:
+#                 pred_forged, _ = model(X, passports=forged_passports, verification_mode=True)
+#                 forged_loss += loss_fn(pred_forged, y)[0]
+#                 forged_accuracy += metrics_fn(pred_forged, y)
+
+#     standard_loss /= num_batches
+#     standard_accuracy /= num_batches
+#     mlflow.log_metric(f"{phase.lower()}_no_passport_loss", f"{standard_loss:2f}", step=epoch)
+#     mlflow.log_metric(f"{phase.lower()}_no_passport_accuracy", f"{standard_accuracy:2f}", step=epoch)
+#     print(f"{phase} metrics: \nStandard Accuracy: {standard_accuracy:.2f}, Avg loss: {standard_loss:2f} \n")
+
+
+#     # Log legitimate passport metrics if available
+#     if passports is not None:
+#         passport_loss /= num_batches
+#         passport_accuracy /= num_batches
+#         mlflow.log_metric(f"{phase.lower()}_valid_passport_loss", f"{passport_loss:2f}", step=epoch)
+#         mlflow.log_metric(f"{phase.lower()}_valid_passport_accuracy", f"{passport_accuracy:2f}", step=epoch)
+#         print(f"{phase} metrics: \nPassport Accuracy: {passport_accuracy:.2f}, Avg loss: {passport_loss:2f} \n")
+
+#     # Log forged passport metrics if available
+#     if forged_passports is not None:
+#         forged_loss /= num_batches
+#         forged_accuracy /= num_batches
+#         mlflow.log_metric(f"{phase.lower()}_forged_passport_loss", f"{forged_loss:2f}", step=epoch)
+#         mlflow.log_metric(f"{phase.lower()}_forged_passport_accuracy", f"{forged_accuracy:2f}", step=epoch)
+#         print(f"{phase} metrics: \nForged Passport Accuracy: {forged_accuracy:.2f}, Avg loss: {forged_loss:2f} \n")    
+
+#     results = {
+#         "standard": (standard_loss, standard_accuracy),
+#         "passport": (passport_loss, passport_accuracy) if passports is not None else None,
+#         "forged": (forged_loss, forged_accuracy) if forged_passports is not None else None
+#     }
+
+#     return results
+
+def evaluate(dataloader, model, loss_fn, metrics_fn, epoch, target_signs, passports=None, forged_passports=None, phase="Validation"):
     """Evaluate the model on a single pass of the dataloader.
 
     Args:
@@ -450,44 +336,46 @@ def evaluate(dataloader, model, loss_fn, metrics_fn, epoch, passports=None, forg
             X, y = X.to(device), y.to(device)
 
             # 1. Standard forward pass (No passport)
-            pred_standard = model(X)
-            standard_loss += loss_fn(pred_standard, y).item()
+            pred_standard, _ = model(X)
+            standard_loss += loss_fn(pred_standard, y)[0]
             standard_accuracy += metrics_fn(pred_standard, y)
 
             # 2. Forward pass with legitimate passports
             if passports is not None:
-                pred_passport = model(X, passports=passports, verification_mode=True)
-                passport_loss += loss_fn(pred_passport, y).item()
+                pred_passport, _ = model(X, passports=passports, verification_mode=True)
+                passport_loss += loss_fn(pred_passport, y)[0]
                 passport_accuracy += metrics_fn(pred_passport, y)
 
             # 3. Forward pass with forged passports (if provided)
             if forged_passports is not None:
-                pred_forged = model(X, passports=forged_passports, verification_mode=True)
-                forged_loss += loss_fn(pred_forged, y).item()
+                pred_forged, _ = model(X, passports=forged_passports, verification_mode=True)
+                forged_loss += loss_fn(pred_forged, y)[0]
                 forged_accuracy += metrics_fn(pred_forged, y)
 
     standard_loss /= num_batches
     standard_accuracy /= num_batches
-    mlflow.log_metric(f"{phase.lower()}_loss", f"{standard_loss:2f}", step=epoch)
-    mlflow.log_metric(f"{phase.lower()}_accuracy", f"{standard_accuracy:2f}", step=epoch)
-    print(f"{phase} metrics: \nStandard Accuracy: {standard_loss:.2f}, Avg loss: {standard_accuracy:2f} \n")
+    mlflow.log_metric(f"{phase.lower()}_no_passport_loss", f"{standard_loss:2f}", step=epoch)
+    mlflow.log_metric(f"{phase.lower()}_no_passport_accuracy", f"{standard_accuracy:2f}", step=epoch)
+    print(f"{phase} metrics: \nStandard Accuracy: {standard_accuracy:.2f}, Avg loss: {standard_loss:2f} \n")
 
 
     # Log legitimate passport metrics if available
     if passports is not None:
         passport_loss /= num_batches
         passport_accuracy /= num_batches
-        mlflow.log_metric(f"{phase.lower()}_loss", f"{passport_loss:2f}", step=epoch)
-        mlflow.log_metric(f"{phase.lower()}_accuracy", f"{passport_accuracy:2f}", step=epoch)
-        print(f"{phase} metrics: \nPassport Accuracy: {passport_loss:.2f}, Avg loss: {passport_accuracy:2f} \n")
+        mlflow.log_metric(f"{phase.lower()}_valid_passport_loss", f"{passport_loss:2f}", step=epoch)
+        mlflow.log_metric(f"{phase.lower()}_valid_passport_accuracy", f"{passport_accuracy:2f}", step=epoch)
+        print(f"{phase} metrics: \nPassport Accuracy: {passport_accuracy:.2f}, Avg loss: {passport_loss:2f} \n")
 
     # Log forged passport metrics if available
     if forged_passports is not None:
         forged_loss /= num_batches
         forged_accuracy /= num_batches
-        mlflow.log_metric(f"{phase.lower()}_loss", f"{forged_loss:2f}", step=epoch)
-        mlflow.log_metric(f"{phase.lower()}_accuracy", f"{forged_accuracy:2f}", step=epoch)
-        print(f"{phase} metrics: \nForged Passport Accuracy: {forged_loss:.2f}, Avg loss: {forged_accuracy:2f} \n")    
+        mlflow.log_metric(f"{phase.lower()}_forged_passport_loss", f"{forged_loss:2f}", step=epoch)
+        mlflow.log_metric(f"{phase.lower()}_forged_passport_accuracy", f"{forged_accuracy:2f}", step=epoch)
+        print(f"{phase} metrics: \nForged Passport Accuracy: {forged_accuracy:.2f}, Avg loss: {forged_loss:2f} \n")    
+
+    verify(model, passports, target_signs)
 
     results = {
         "standard": (standard_loss, standard_accuracy),
@@ -497,7 +385,8 @@ def evaluate(dataloader, model, loss_fn, metrics_fn, epoch, passports=None, forg
 
     return results
 
-epochs = 120
+epochs = 1000
+# epochs = 52
 loss_fn = nn.CrossEntropyLoss()
 passport_generator = PassportGenerator(seed=42)
 metric_fn = Accuracy(task="multiclass", num_classes=10).to(device)
@@ -529,21 +418,66 @@ with mlflow.start_run() as run:
     start_epoch = 0  # Default starting epoch
     best_val_loss = float("inf")  # Default best evaluation loss
 
+    # Initialize optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
+
+    # Generate passports
+    passports, target_signs = passport_generator.generate_passport()
+
     if os.path.exists(best_checkpoint):  
         print(f"Loading best model from '{best_checkpoint}'...")
         start_epoch, best_eval_loss = load_checkpoint(model, optimizer, scheduler, best_checkpoint)
+        # print("Loading passports and target_signs")
+        # # Load target signs from mlflow artifacts
+        # target_sign_artifact_path = "target_signs.pt"
+        # target_sign_local_path = mlflow.artifacts.download_artifacts(artifact_path=target_sign_artifact_path, run_id="6ab0af7b0b724a228ff9af1524fc7fa1")
+        # with open(target_sign_local_path, "rb") as f:
+        #     target_signs = torch.load(f)
+        #     print("Got the target signs")
+
+        # # Load original passports from mlflow artifacts
+        # passports_artifact_path = "passports.pt"
+        # passports_local_path = mlflow.artifacts.download_artifacts(artifact_path=passports_artifact_path, run_id="6ab0af7b0b724a228ff9af1524fc7fa1")
+        # with open(passports_local_path, "rb") as f:
+        #     passports = torch.load(f)
+        #     print("Got the passports")
+
     elif os.path.exists(latest_checkpoint):
         print(f"Loading latest model from '{latest_checkpoint}'...")
         start_epoch, _ = load_checkpoint(model, optimizer, scheduler, latest_checkpoint)
 
-    # Generate passports
-    passports, target_signs = passport_generator.generate_passport()
+        # print("Loading passports and target_signs")
+        # # Load target signs from mlflow artifacts
+        # target_sign_artifact_path = "target_signs.pt"
+        # target_sign_local_path = mlflow.artifacts.download_artifacts(artifact_path=target_sign_artifact_path, run_id="6ab0af7b0b724a228ff9af1524fc7fa1")
+        # with open(target_sign_local_path, "rb") as f:
+        #     target_signs = torch.load(f)
+        #     print("Got the target signs")
+
+        # # Load original passports from mlflow artifacts
+        # passports_artifact_path = "passports.pt"
+        # passports_local_path = mlflow.artifacts.download_artifacts(artifact_path=passports_artifact_path, run_id="6ab0af7b0b724a228ff9af1524fc7fa1")
+        # with open(passports_local_path, "rb") as f:
+        #     passports = torch.load(f)
+        #     print("Got the passports")
+
+
+
+    with open("target_signs.pt", "wb") as f:
+        torch.save(target_signs, f)
+    
+    with open("passports.pt", "wb") as f:
+        torch.save(passports, f)
+
+    mlflow.log_artifact("target_signs.pt")
+    mlflow.log_artifact("passports.pt")
+
     passports = [(p.to(device), pb.to(device)) for p, pb in passports]
     target_signs = [sign.to(device) for sign in target_signs]
 
-    # Initialize optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
+    forged_passports, _ = PassportGenerator(55).generate_passport()
+    forged_passports = [(p.to(device), pb.to(device)) for p, pb in forged_passports]
 
     criterion = PassportLoss(
         task_loss_fn=loss_fn,
@@ -555,8 +489,9 @@ with mlflow.start_run() as run:
 
     for t in range(start_epoch, epochs):
         print(f"Epoch {t+1}\n-------------------------------")
-        train(no_trigger_train_dataloader, trigger_train_dataloader, model, criterion, metric_fn, optimizer, passports, target_signs, epoch=t)
-        results = evaluate(val_dataloader, model, criterion, metric_fn, passports=passpports, epoch=t)
+        train(train_dataloader, model, criterion, metric_fn, optimizer, passports, target_signs, epoch=t)
+        results = evaluate(val_dataloader, model, criterion, metric_fn, target_signs=target_signs, passports=passports, forged_passports=forged_passports, epoch=t)
+        # results = evaluate(val_dataloader, model, criterion, metric_fn, passports=passports, forged_passports=forged_passports, epoch=t)
 
         val_loss, val_accuracy = results["standard"]
         scheduler.step(val_loss)
@@ -598,9 +533,9 @@ with mlflow.start_run() as run:
 
 
     # Evaluate the best model on the test dataset
-    test_loss, test_accuracy = evaluate(test_dataloader, model, loss_fn, metric_fn, epoch=epochs, phase="Test")
+    evaluate(test_dataloader, model, criterion, metric_fn, passports=passports, forged_passports=forged_passports, epoch=epochs, phase="Test")
 
     # Save the best model to MLflow.
     if best_model_state_dict is not None:
         model.load_state_dict(best_model_state_dict)
-        mlflow.pytorch.log_model(model, "best_model", signature=signature)
+        mlflow.pytorch.log_model(model, "sign_enc_model", signature=signature)

@@ -14,12 +14,16 @@ class PassportLayer(nn.Module):
         self.eps = eps
         self.momentum = momentum
 
-        # Running statistics for normalization
-        self.register_buffer('running_mean', torch.zeros(num_features))
-        self.register_buffer('running_var', torch.ones(num_features))
+        # # Running statistics for normalization
+        # self.register_buffer('running_mean', torch.zeros(num_features))
+        # self.register_buffer('running_var', torch.ones(num_features))
+
+        self.register_buffer('running_mean', torch.zeros(1, num_features, 1, 1))
+        self.register_buffer('running_var', torch.ones(1, num_features, 1, 1))
+
 
     def forward(self, x, conv_weights, passport_scale = None, passport_bias = None):
-
+        # print("Inside passport layer")
         # Standard normalization (X_c)
         mean = x.mean(dim=(0, 2, 3), keepdim=True)  # Mean over batch and spatial dimensions
         var = x.var(dim=(0, 2, 3), keepdim=True, unbiased=False)  # Variance over batch and spatial dimensions
@@ -33,11 +37,30 @@ class PassportLayer(nn.Module):
             mean = self.running_mean
             var = self.running_var
         
+        # print("mean shape:", mean.shape)
+        # print("var shape:", var.shape)
+
+        # print("x1_shape:", x.shape)
         # Normalize input (X_p)
-        x_norm = (x - mean[None, :, None, None]) / torch.sqrt(var[None, :, None, None] + self.eps)  # Shape: [B, C, H, W]
+        # x_norm = (x - mean[None, :, None, None]) / torch.sqrt(var[None, :, None, None] + self.eps)  # Shape: [B, C, H, W]
+        try:
+            x_norm = (x - mean) / torch.sqrt(var + self.eps)  # Shape: [B, C, H, W]
+        except:
+            print("mean:", mean.shape)
+            print("var:", var.shape)
+            print("x:", x.shape)
+            raise
+        # print("x1_norm:", x_norm.shape)
+
+        # print("Done calculating x_norm")
 
         # If passport_scale and passport_bias are provided, apply them
         if passport_scale is not None and passport_bias is not None:
+            # print("passport_scale shape: ", passport_scale.shape)
+            # print("passport_bias shape: ", passport_bias.shape)
+            # print("conv_weights shape: ", conv_weights.shape)
+            # print("flat_weights shape: ", conv_weights.view(conv_weights.size(0), -1).shape)
+
             # Reshape conv_weights to match passport dimensions
             flat_weights = conv_weights.view(conv_weights.size(0), -1)  # Flatten the conv weights
 
@@ -49,11 +72,14 @@ class PassportLayer(nn.Module):
             bias_product = torch.matmul(flat_weights, passport_bias.t())
             bias = bias_product.mean(dim=1) # Average over the batch dimension to get a single bias term per channel
 
+            # print("Done calculating scale and bias")
             # Apply scale and bias to normalized input
-            return (x_norm * scale[None, :, None, None] + bias[None, :, None, None], scale, bias)  # Shape: [B, C, H, W], scale for sign_loss computation
+            return x_norm * scale[None, :, None, None] + bias[None, :, None, None], scale  # Shape: [B, C, H, W], scale for sign_loss computation
         else:
             # If no passport_scale or passport_bias provided, return the normalized tensor
-            return x_norm
+            # print("returning x_norm")   
+            # print("x_norm: ", x_norm)
+            return x_norm, None
 
 class PassportConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, padding=1):
@@ -64,9 +90,26 @@ class PassportConvBlock(nn.Module):
 
     def forward(self, x, passport_scale=None, passport_bias=None):
         x = self.conv(x)  # Apply convolution
-        x, scale, _ = self.passport_layer(x, self.conv.weight, passport_scale, passport_bias)
+        x, scale = self.passport_layer(x, self.conv.weight, passport_scale, passport_bias)
         x = self.relu(x)
-        return x, scale
+
+        if scale is not None:
+            return x, scale
+
+        return x
+
+class ConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size=3, padding=1):
+        super(ConvBlock, self).__init__()
+        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=padding)
+        self.batchnorm = nn.BatchNorm2d(num_features=out_channels)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        x = self.conv(x)  # Apply convolution
+        x = self.batchnorm(x)
+        x = self.relu(x)
+        return x
 
 class ConvNetModel(nn.Module):
     def __init__(self, cnn_plan: List[LayerType], fc_plan: List[LayerType], input_channels: int, num_classes: int, input_size: int, use_passport: bool = False):
@@ -99,9 +142,7 @@ class ConvNetModel(nn.Module):
                 if self.use_passport:
                     layers.append(PassportConvBlock(in_channels=in_channels, out_channels=out_channels))
                 else:
-                    layers.append(nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=(3,3), padding=1))
-                    layers.append(nn.BatchNorm2d(num_features=layer))
-                    layers.append(nn.ReLU(inplace=True))
+                    layers.append(ConvBlock(in_channels=in_channels, out_channels=out_channels))
                 in_channels = layer
 
         return nn.Sequential(*layers)
@@ -145,22 +186,25 @@ class ConvNetModel(nn.Module):
         """
         scale_factors = []
         
-        for i, layer in enumerate(self.cnn_layers):
+        # print("forward pass, x shape: ", x.shape)
+        passport_idx = 0
+        for layer in self.cnn_layers:
             if verification_mode and isinstance(layer, PassportConvBlock):
                 # For passport layers, pass None for passport_scale and passport_bias
-                passport_scale = passports[i][0] if passports is not None else None
-                passport_bias = passports[i][1] if passports is not None else None
-                x, scale_factor = layer(x, passport_scale, passport_bias)
+                x, scale_factor = layer(x, passports[passport_idx][0], passports[passport_idx][1])
                 scale_factors.append(scale_factor)
+                passport_idx += 1
             else:
                 x = layer(x)
+            
+        # print("Done with CNN layers")
 
         x = x.view(x.size(0), -1)
 
         if verification_mode:
             return self.fc_layers(x), scale_factors
         
-        return self.fc_layers(x)  # Standard forward pass without passport verification
+        return self.fc_layers(x), None  # Standard forward pass without passport verification
 
 class PassportModel(ConvNetModel):
     """
@@ -179,7 +223,11 @@ class PassportModel(ConvNetModel):
         Train step for a batch of data using the passport model.
         """
 
-        output_standard = self.forward(x)
+        # for scale, bias in passports:
+        #     print("passport shape: ", scale.shape)
+
+        # print("Training step, x shape: ", x.shape)
+        # output_standard, _ = self.forward(x)
         output_passport, scale_factors = self.forward(x, passports, verification_mode=True)
 
         # trigger_outputs = None
@@ -188,7 +236,8 @@ class PassportModel(ConvNetModel):
         #     trigger_outputs = self.forward(trigger_x)
         
         loss, loss_details = criterion(
-            output_standard,
+            # output_standard,
+            output_passport,
             targets,
             # passport_outputs=output_passport,  # Passport output for verification
             # original_outputs=output_standard,  # Original outputs for loss calculation
@@ -198,4 +247,47 @@ class PassportModel(ConvNetModel):
             sign_targets=sign_targets  # For sign loss computation, if applicable
         )
 
-        return loss, loss_details, output_standard
+        return loss, loss_details, output_passport
+
+class PassportStudentModel(ConvNetModel):
+    """
+    Passport model that uses the passport layer. 
+    This model is based on BaseModel2 but utilizes the PassportLayer for normalization.
+    This allows the model to leverage the passport mechanism for better generalization.
+    """
+    CNN_PLAN = [32, "M", "D", 64, 64, "M", "D", 128, 128]  # CNN plan
+    FC_PLAN = [512, "D", 512]  # FC plan
+
+    def __init__(self, **kwargs):
+        super().__init__(self.CNN_PLAN, self.FC_PLAN, use_passport=True, **kwargs)
+
+    def train_step(self, x, targets, passports, criterion, trigger_x=None, trigger_targets=None, sign_targets=None):
+        """
+        Train step for a batch of data using the passport model.
+        """
+
+        # for scale, bias in passports:
+        #     print("passport shape: ", scale.shape)
+
+        # print("Training step, x shape: ", x.shape)
+        # output_standard, _ = self.forward(x)
+        output_passport, scale_factors = self.forward(x, passports, verification_mode=True)
+
+        # trigger_outputs = None
+        # if trigger_x is not None and trigger_targets is not None:
+        #     # Forward pass through the model with trigger examples
+        #     trigger_outputs = self.forward(trigger_x)
+        
+        loss, loss_details = criterion(
+            # output_standard,
+            output_passport,
+            targets,
+            # passport_outputs=output_passport,  # Passport output for verification
+            # original_outputs=output_standard,  # Original outputs for loss calculation
+            # trigger_outputs=trigger_outputs  # Trigger outputs for additional loss computation
+            # trigger_targets=trigger_targets,
+            scale_factors=scale_factors if self.use_passport else None,
+            sign_targets=sign_targets  # For sign loss computation, if applicable
+        )
+
+        return loss, loss_details, output_passport
