@@ -157,13 +157,13 @@ def train(dataloader, model, loss_fn, metrics_fn, optimizer, epoch):
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_bd_wm_train_randomColorPatches")
+mlflow.set_experiment("/cifar10_base")
 
 with mlflow.start_run() as run:
     mlflow.run_name = "Pruning and Fine-tuning"
 
     # Load the model 
-    logged_model = "runs:/3616a43f89da4a249ba8918a04342392/best_model"
+    logged_model = "runs:/0481ae63d3984952b7bfd6ebaf74beb5/weight_pt_wm_model"
     loaded_model = mlflow.pytorch.load_model(logged_model)
     loaded_model.to(device)
 
