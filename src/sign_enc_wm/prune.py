@@ -157,13 +157,13 @@ def train(dataloader, model, loss_fn, metrics_fn, optimizer, epoch):
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_sig_enc_wm")
+mlflow.set_experiment("/cifar10_sig_enc_wm_verification")
 
 with mlflow.start_run() as run:
     mlflow.run_name = "Pruning and Fine-tuning"
 
     # Load the model 
-    logged_model = "runs:/adf7c1d9a8254d18b2330ea39ed6a0aa/sign_enc_model"
+    logged_model = "runs:/d21688388c6a4da2a8c01a7284a2ed81/sign_enc_model"
     loaded_model = mlflow.pytorch.load_model(logged_model)
     loaded_model.to(device)
 
@@ -176,7 +176,7 @@ with mlflow.start_run() as run:
     print("Model pruned successfully!")
 
     # Fine-tune the pruned model
-    epochs = 40
+    epochs = 20
     loss_fn = nn.CrossEntropyLoss()
     metric_fn = Accuracy(task="multiclass", num_classes=10).to(device)
     optimizer = torch.optim.Adam(loaded_model.parameters(), lr=1e-3)
