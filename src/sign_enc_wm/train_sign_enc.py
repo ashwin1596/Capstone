@@ -63,7 +63,7 @@ test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_sig_enc_wm_verification")
+mlflow.set_experiment("/cifar10_sig_enc_wm_final")
 
 # Get cpu or gpu for training.
 device = "cuda:2" if torch.cuda.is_available() else "cpu"
@@ -257,7 +257,7 @@ def train(dataloader, model, loss_fn, metrics_fn, optimizer, passports, sign_tar
         if batch % 100 == 0:
             loss, current = loss.item(), batch
             step = batch // 100 * (epoch + 1)
-            print(loss_details)
+            # print(loss_details)
             mlflow.log_metric("loss", f"{loss:2f}", step=step)
             mlflow.log_metric("accuracy", f"{accuracy:2f}", step=step)
             print(f"loss: {loss:2f} accuracy: {accuracy:2f} [{current} / {len(dataloader)}]")

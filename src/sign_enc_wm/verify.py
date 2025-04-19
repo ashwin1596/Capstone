@@ -53,7 +53,7 @@ def verify(model, passports, target_signs):
 
     with torch.no_grad():
         for name, param in model.named_parameters():
-            print(name)
+            # print(name)
             if "conv.weight" in name:
                 passport_scale, passport_bias = passports[ind]
                 signs = signature_detection(param, passport_scale)
@@ -71,28 +71,29 @@ def verify(model, passports, target_signs):
     print(f"{match_count}/{len(target_signs)} layers matched")
 
 mlflow.set_tracking_uri("http://localhost:5000")
-mlflow.set_experiment("/cifar10_sig_enc_wm_verification")
+mlflow.set_experiment("/cifar10_sig_enc_wm_final")
 
 with mlflow.start_run() as run:
 
     # Load the watermarked model 
     print(run.info.run_id)
-    concerned_model = f"runs:/9aafa4b1503e4188a9f9a87a939b1630/finetuned_model"
-    # concerned_model = f"runs:/86fa094a044a4a6d84eb705b6d9a1825/distilled_model"
+    # concerned_model = "runs:/a7c510b743f943478a919c9c4b943700/pruned_model" 
+    # concerned_model = "runs:/a7c510b743f943478a919c9c4b943700/finetuned_model" 
+    concerned_model = f"runs:/86fa094a044a4a6d84eb705b6d9a1825/distilled_model"
     # concerned_model = f"runs:/d21688388c6a4da2a8c01a7284a2ed81/sign_enc_model"
     concerned_model = mlflow.pytorch.load_model(concerned_model)
     concerned_model.to(device)
 
     # Load target signs from mlflow artifacts
     target_sign_artifact_path = "target_signs.pt"
-    target_sign_local_path = mlflow.artifacts.download_artifacts(artifact_path=target_sign_artifact_path, run_id="d21688388c6a4da2a8c01a7284a2ed81")
+    target_sign_local_path = mlflow.artifacts.download_artifacts(artifact_path=target_sign_artifact_path, run_id="9ff10be238c648418ea638b65529c4ce")
     with open(target_sign_local_path, "rb") as f:
         target_signs = torch.load(f)
         print("Got the target signs")
 
     # Load original passports from mlflow artifacts
     passports_artifact_path = "passports.pt"
-    passports_local_path = mlflow.artifacts.download_artifacts(artifact_path=passports_artifact_path, run_id="d21688388c6a4da2a8c01a7284a2ed81")
+    passports_local_path = mlflow.artifacts.download_artifacts(artifact_path=passports_artifact_path, run_id="9ff10be238c648418ea638b65529c4ce")
     with open(passports_local_path, "rb") as f:
         passports = torch.load(f)
         print("Got the passports")

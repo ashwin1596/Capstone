@@ -13,6 +13,8 @@ import mlflow
 from mlflow.types import Schema, TensorSpec
 from mlflow.models import ModelSignature
 
+from train_sign_enc import PassportGenerator
+
 import numpy as np
 
 import os
@@ -227,19 +229,22 @@ best_model_state_dict = None
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_sig_enc_wm_verification")
+mlflow.set_experiment("/cifar10_sig_enc_wm_final")
 
 with mlflow.start_run() as run:
     # Load original passports from mlflow artifacts
     passports_artifact_path = "passports.pt"
-    passports_local_path = mlflow.artifacts.download_artifacts(artifact_path=passports_artifact_path, run_id="d21688388c6a4da2a8c01a7284a2ed81")
+    passports_local_path = mlflow.artifacts.download_artifacts(artifact_path=passports_artifact_path, run_id="9ff10be238c648418ea638b65529c4ce")
     with open(passports_local_path, "rb") as f:
         passports = torch.load(f)
         print("Got the passports")
     passports = [(p.to(device), pb.to(device)) for p, pb in passports]
 
+    forged_passports, _ = PassportGenerator(55).generate_passport()
+    forged_passports = [(p.to(device), pb.to(device)) for p, pb in forged_passports]
+
     # Load the model 
-    logged_model = "runs:/d21688388c6a4da2a8c01a7284a2ed81/sign_enc_model"
+    logged_model = "runs:/9ff10be238c648418ea638b65529c4ce/sign_enc_model"
     loaded_model = mlflow.pytorch.load_model(logged_model)
     teacher_model = loaded_model.to(device)
 
@@ -270,7 +275,8 @@ with mlflow.start_run() as run:
     for t in range(start_epoch, epochs):
         print(f"Epoch {t+1}\n-------------------------------")
         # train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t)
-        train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t, passports=passports)
+        # train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t, passports=passports)
+        train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t, passports=forged_passports)
         val_loss, val_accuracy = evaluate(teacher_model, student_model, val_dataloader, loss_fn, metric_fn, epoch=t)
 
         scheduler.step(val_loss)
@@ -316,4 +322,4 @@ with mlflow.start_run() as run:
 
     if best_model_state_dict is not None:
         student_model.load_state_dict(best_model_state_dict)
-        mlflow.pytorch.log_model(student_model, "distilled_model", signature=signature)
+        mlflow.pytorch.log_model(student_model, "forged_pass_distilled_model", signature=signature)
