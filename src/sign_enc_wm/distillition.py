@@ -83,7 +83,7 @@ class DistillationLoss(nn.Module):
         loss = self.alpha * hard_loss + (1 - self.alpha) * soft_loss
         return loss
 
-def train(teacher_model, student_model, dataloader, loss_fn, optimizer, metrics_fn, epoch):
+def train(teacher_model, student_model, dataloader, loss_fn, optimizer, metrics_fn, epoch, passports):
     teacher_model.eval()
 
     student_model.train()
@@ -93,7 +93,7 @@ def train(teacher_model, student_model, dataloader, loss_fn, optimizer, metrics_
 
         # Forward pass for both models
         with torch.no_grad():
-            teacher_logits, _ = teacher_model(X)
+            teacher_logits, _ = teacher_model(X, passports=passports, verification_mode=True)
             
         student_logits, _ = student_model(X)
 
@@ -115,6 +115,39 @@ def train(teacher_model, student_model, dataloader, loss_fn, optimizer, metrics_
             print(f"loss: {loss:2f} accuracy: {accuracy:2f} [{current} / {len(dataloader)}]")
     
     return student_model
+
+# def train(teacher_model, student_model, dataloader, loss_fn, optimizer, metrics_fn, epoch):
+#     teacher_model.eval()
+
+#     student_model.train()
+
+#     for batch, (X, y) in enumerate(dataloader):
+#         X, y = X.to(device), y.to(device)
+
+#         # Forward pass for both models
+#         with torch.no_grad():
+#             teacher_logits, _ = teacher_model(X)
+            
+#         student_logits, _ = student_model(X)
+
+#         # Calculate distillation loss
+#         loss = loss_fn(student_logits, teacher_logits, y)
+        
+#         accuracy = metrics_fn(student_logits, y)
+
+#         # Backpropagation.
+#         loss.backward()
+#         optimizer.step()
+#         optimizer.zero_grad()
+
+#         if batch % 100 == 0:
+#             loss, current = loss.item(), batch
+#             step = batch // 100 * (epoch + 1)
+#             mlflow.log_metric("loss", f"{loss:2f}", step=step)
+#             mlflow.log_metric("accuracy", f"{accuracy:2f}", step=step)
+#             print(f"loss: {loss:2f} accuracy: {accuracy:2f} [{current} / {len(dataloader)}]")
+    
+#     return student_model
 
 def load_checkpoint(model, optimizer, scheduler, checkpoint_path, device="cuda:3" if torch.cuda.is_available() else "cpu"):
     """Loads model, optimizer, and scheduler states from a checkpoint file."""
@@ -194,11 +227,19 @@ best_model_state_dict = None
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_sig_enc_wm")
+mlflow.set_experiment("/cifar10_sig_enc_wm_verification")
 
 with mlflow.start_run() as run:
+    # Load original passports from mlflow artifacts
+    passports_artifact_path = "passports.pt"
+    passports_local_path = mlflow.artifacts.download_artifacts(artifact_path=passports_artifact_path, run_id="d21688388c6a4da2a8c01a7284a2ed81")
+    with open(passports_local_path, "rb") as f:
+        passports = torch.load(f)
+        print("Got the passports")
+    passports = [(p.to(device), pb.to(device)) for p, pb in passports]
+
     # Load the model 
-    logged_model = "runs:/adf7c1d9a8254d18b2330ea39ed6a0aa/sign_enc_model"
+    logged_model = "runs:/d21688388c6a4da2a8c01a7284a2ed81/sign_enc_model"
     loaded_model = mlflow.pytorch.load_model(logged_model)
     teacher_model = loaded_model.to(device)
 
@@ -215,11 +256,6 @@ with mlflow.start_run() as run:
     # Log training parameters.
     mlflow.log_params(params)
 
-    # # Log model summary.
-    # with open("model_summary.txt", "w") as f:
-    #     f.write(str(summary(model)))
-    # mlflow.log_artifact("model_summary.txt")
-
     start_epoch = 0  # Default starting epoch
     best_val_loss = float("inf")  # Default best evaluation loss
 
@@ -233,7 +269,8 @@ with mlflow.start_run() as run:
 
     for t in range(start_epoch, epochs):
         print(f"Epoch {t+1}\n-------------------------------")
-        train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t)
+        # train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t)
+        train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t, passports=passports)
         val_loss, val_accuracy = evaluate(teacher_model, student_model, val_dataloader, loss_fn, metric_fn, epoch=t)
 
         scheduler.step(val_loss)

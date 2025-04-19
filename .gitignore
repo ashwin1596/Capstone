@@ -8,4 +8,6 @@ model_summary.txt
 *.pth
 *.path
 
+*.pt
+
 *.csv
