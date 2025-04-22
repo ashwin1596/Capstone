@@ -53,13 +53,16 @@ These results highlight important trade-offs between security, robustness, and u
 ## 📁 Project Structure
 
 ```
-├── models/                # CNN model implementations
-├── watermarking/          # Watermark embedding and verification code
-├── evaluation/            # Scripts for pruning, distillation, and analysis
-├── results/               # Experimental results and plots
-├── utils/                 # Helper functions
-├── README.md              # Project description
-└── requirements.txt       # Python dependencies
+├── src/
+   ├── models.py              # CNN model implementations
+   ├── base/                  # Base model implementations
+   ├── backdoor_wm/           # Backdoor Trigger Scheme implementation
+   ├── weight_pt_wm/          # Weight Perturbation Scheme implementation
+   ├── sign_enc_wm/           # Passport-based Scheme implementation
+   ├── README.md              # Project description
+├── environment.yaml          # Python dependencies
+├── Report.pdf          # Detailed report
+├── Poster.pdf          # Poster
 ```
 
 ## 📌 Key Takeaways
