@@ -77,29 +77,10 @@ def plot_watermark_accuracy():
     plt.savefig("watermark_accuracy.png")
     plt.show()
 
-
-def plot_f1_scores(df_base, df_wt_pt_wm, df_multicolor, df_sig_enc, fig_path="f1_scores_comparison.pdf"):
+def plot_f1_scores_barchart_general(df_base, df_wt_pt_wm, df_bd, df_sig_enc, class_name):
     """
-    Plot F1 scores for Baseline, Distilled, and Pruned models with 10 classes.
-    Optimized for IEEE paper format with angled axis labels instead of value annotations.
+    Plot F1 scores for Baseline, Distilled, and Pruned models for a specific class.
     """
-    # Set the non-interactive backend to avoid display issues
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    import numpy as np
-    
-    # Create figure with high resolution
-    # plt.figure(figsize=(10, 9), dpi=300)
-    plt.figure(dpi=300)
-    
-    # Extract data
-    classes = df_base['Class'].to_numpy()
-    f1_base = df_base['F1 Score'].to_numpy()
-    f1_wt_pt_wm = df_wt_pt_wm['F1 Score'].to_numpy()
-    f1_multicolor = df_multicolor['F1 Score'].to_numpy()
-    f1_sig_enc = df_sig_enc['F1 Score'].to_numpy()
-    
     # Set larger font sizes for IEEE format
     plt.rcParams.update({
         'font.size': 12,
@@ -110,51 +91,107 @@ def plot_f1_scores(df_base, df_wt_pt_wm, df_multicolor, df_sig_enc, fig_path="f1
         'legend.fontsize': 12
     })
 
-    # Create positions for grouped bars with added space between groups
-    group_gap = 0.5  # Adjust this value to increase or decrease the gap
-    x = np.arange(len(classes)) * (1 + group_gap)  # Add space between groups
-    width = 0.25  # width of bars
+    # Extract F1 scores for the specified class
+    f1_base = df_base[df_base['Class'] == class_name]['F1 Score'].values[0]
+    f1_wt_pt_wm = df_wt_pt_wm[df_wt_pt_wm['Class'] == class_name]['F1 Score'].values[0]
+    f1_bd = df_bd[df_bd['Class'] == class_name]['F1 Score'].values[0]
+    f1_sig_enc = df_sig_enc[df_sig_enc['Class'] == class_name]['F1 Score'].values[0]
 
-    # Plot grouped bars with distinct patterns for better differentiation in print
-    plt.bar(x - 1.5 * width, f1_base, width, label='Baseline', color='#CD1C18')
-    plt.bar(x - 0.5 * width, f1_wt_pt_wm, width, label='Weight-Pt', color='#FFA896') 
-    plt.bar(x + 0.5 * width, f1_multicolor, width, label='Backdoor', color='#9B1313')
-    plt.bar(x + 1.5 * width, f1_sig_enc, width, label='Passport', color='#38000A')
-   
-    # Add grid, labels and title
-    plt.grid(axis='y', alpha=0.3)
+    # Bar plot for F1 scores
+    labels = ['Baseline\nModel', 'Weight\nPerturbed', 'Backdoor\nEmbedded', 'Passport\nEmbedded']
+    f1_scores = [f1_base, f1_wt_pt_wm, f1_bd, f1_sig_enc]
+    # plt.bar(labels, f1_scores, color=['#CD1C18', '#FFA896', '#9B1313', '#38000A'])
+    plt.bar(labels, f1_scores, color=['#1A4A96', '#2D68C4', '#143A78', '#69A3E1'])
+
+    # Graph details
+    plt.xlabel('Model', fontweight='bold')
     plt.ylabel('F1 Score', fontweight='bold')
-    plt.xlabel('Class', fontweight='bold')
-    plt.title('F1 Score Comparison Across Model Variants', fontsize=14, pad=5)
-    
-    # Set y-axis to start from 0 and have a reasonable upper limit
-    plt.ylim(0, max(max(f1_base), max(f1_wt_pt_wm), max(f1_multicolor), max(f1_sig_enc)) * 1.1)
-    
-    # Set x-ticks in the middle of grouped bars with 45-degree rotation
-    plt.xticks(x, classes, rotation=45, ha='right')
-    
-    # Customize legend with clear background
-    plt.legend(frameon=False, facecolor='white', edgecolor='black', 
-               loc='lower center', bbox_to_anchor=(0.5, -0.35), ncol=4)
-    
-    # Make sure everything fits properly
+    plt.title(f'F1 Score Comparison: Baseline vs. Watermarked Models', fontsize=14, pad=10)
+    plt.ylim(0, 1)  # Assuming F1 scores are between 0 and 1
+    plt.grid(axis='y')
     plt.tight_layout()
+    plt.savefig(fig)
+    plt.show()
+
+# def plot_f1_scores(df_base, df_wt_pt_wm, df_multicolor, df_sig_enc, fig_path="f1_scores_comparison.pdf"):
+#     """
+#     Plot F1 scores for Baseline, Distilled, and Pruned models with 10 classes.
+#     Optimized for IEEE paper format with angled axis labels instead of value annotations.
+#     """
+#     # Set the non-interactive backend to avoid display issues
+#     import matplotlib
+#     matplotlib.use('Agg')
+#     import matplotlib.pyplot as plt
+#     import numpy as np
     
-    # Save with high quality
-    plt.savefig(fig_path, format='png', bbox_inches='tight')
+#     # Create figure with high resolution
+#     # plt.figure(figsize=(10, 9), dpi=300)
+#     plt.figure(dpi=300)
+    
+#     # Extract data
+#     classes = df_base['Class'].to_numpy()
+#     f1_base = df_base['F1 Score'].to_numpy()
+#     f1_wt_pt_wm = df_wt_pt_wm['F1 Score'].to_numpy()
+#     f1_multicolor = df_multicolor['F1 Score'].to_numpy()
+#     f1_sig_enc = df_sig_enc['F1 Score'].to_numpy()
+    
+#     # Set larger font sizes for IEEE format
+#     plt.rcParams.update({
+#         'font.size': 12,
+#         'axes.labelsize': 12,
+#         'axes.titlesize': 12,
+#         'xtick.labelsize': 12,
+#         'ytick.labelsize': 12,
+#         'legend.fontsize': 12
+#     })
+
+#     # Create positions for grouped bars with added space between groups
+#     group_gap = 0.5  # Adjust this value to increase or decrease the gap
+#     x = np.arange(len(classes)) * (1 + group_gap)  # Add space between groups
+#     width = 0.25  # width of bars
+
+#     # Plot grouped bars with distinct patterns for better differentiation in print
+#     plt.bar(x - 1.5 * width, f1_base, width, label='Baseline', color='#CD1C18')
+#     plt.bar(x - 0.5 * width, f1_wt_pt_wm, width, label='Weight-Pt', color='#FFA896') 
+#     plt.bar(x + 0.5 * width, f1_multicolor, width, label='Backdoor', color='#9B1313')
+#     plt.bar(x + 1.5 * width, f1_sig_enc, width, label='Passport', color='#38000A')
+   
+#     # Add grid, labels and title
+#     plt.grid(axis='y', alpha=0.3)
+#     plt.ylabel('F1 Score', fontweight='bold')
+#     plt.xlabel('Class', fontweight='bold')
+#     plt.title('F1 Score Comparison Across Model Variants', fontsize=14, pad=5)
+    
+#     # Set y-axis to start from 0 and have a reasonable upper limit
+#     plt.ylim(0, max(max(f1_base), max(f1_wt_pt_wm), max(f1_multicolor), max(f1_sig_enc)) * 1.1)
+    
+#     # Set x-ticks in the middle of grouped bars with 45-degree rotation
+#     plt.xticks(x, classes, rotation=45, ha='right')
+    
+#     # Customize legend with clear background
+#     plt.legend(frameon=False, facecolor='white', edgecolor='black', 
+#                loc='lower center', bbox_to_anchor=(0.5, -0.35), ncol=4)
+    
+#     # Make sure everything fits properly
+#     plt.tight_layout()
+    
+#     # Save with high quality
+#     plt.savefig(fig_path, format='png', bbox_inches='tight')
 
 def main():
     # Read CSV files
     df_base = read_csv(gen_inf_res_base)
     df_wt_pt_wm = read_csv(gen_inf_res_wt_pt_wm)
-    df_multicolor = read_csv(gen_inf_res_multicolor)
+    df_bd = read_csv(gen_inf_res_multicolor)
     df_sig_enc = read_csv(gen_inf_res_sig_enc)
 
-    # Ensure all files were read properly before plotting
-    if df_base is not None and df_wt_pt_wm is not None and df_multicolor is not None and df_sig_enc is not None:
-        plot_f1_scores(df_base, df_wt_pt_wm, df_multicolor, df_sig_enc, fig_path=fig)
-    else:
-        print("One or more CSV files could not be read. Exiting.")
+    plot_f1_scores_barchart_general(df_base, df_wt_pt_wm, df_bd, df_sig_enc, class_name="Total")
+
+    # # Ensure all files were read properly before plotting
+    # if df_base is not None and df_wt_pt_wm is not None and df_multicolor is not None and df_sig_enc is not None:
+    #     plot_f1_scores(df_base, df_wt_pt_wm, df_multicolor, df_sig_enc, fig_path=fig)
+    # else:
+    #     print("One or more CSV files could not be read. Exiting.")
 
 
 if __name__ == "__main__":

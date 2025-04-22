@@ -77,9 +77,9 @@ with mlflow.start_run() as run:
 
     # Load the watermarked model 
     print(run.info.run_id)
-    # concerned_model = "runs:/a7c510b743f943478a919c9c4b943700/pruned_model" 
+    concerned_model = "runs:/a7c510b743f943478a919c9c4b943700/pruned_model" 
     # concerned_model = "runs:/a7c510b743f943478a919c9c4b943700/finetuned_model" 
-    concerned_model = f"runs:/86fa094a044a4a6d84eb705b6d9a1825/distilled_model"
+    # concerned_model = f"runs:/86fa094a044a4a6d84eb705b6d9a1825/distilled_model"
     # concerned_model = f"runs:/d21688388c6a4da2a8c01a7284a2ed81/sign_enc_model"
     concerned_model = mlflow.pytorch.load_model(concerned_model)
     concerned_model.to(device)

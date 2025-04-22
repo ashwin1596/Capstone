@@ -130,8 +130,8 @@ def plot_f1_scores(class_name):
     plt.figure(dpi=300)
     plt.rcParams.update({
         'font.size': 12,
-        'axes.labelsize': 12,
-        'axes.titlesize': 12,
+        'axes.labelsize': 14,
+        'axes.titlesize': 14,
         'xtick.labelsize': 12,
         'ytick.labelsize': 12,
         'legend.fontsize': 12
@@ -159,6 +159,46 @@ def plot_f1_scores(class_name):
 
     plt.tight_layout()
     plt.savefig(f"sig_enc_f1_scores.png", format='png', bbox_inches='tight')
+    plt.close()
+
+def plot_watermark_accuracy():
+    """
+    Plot a bar chart comparing watermark detection accuracy for pruned and baseline models
+    using the weight perturbation method.
+    """
+    # Set larger font sizes for IEEE format
+    plt.rcParams.update({
+        'font.size': 12,
+        'axes.labelsize': 14,
+        'axes.titlesize': 14,
+        'xtick.labelsize': 12,
+        'ytick.labelsize': 12,
+        'legend.fontsize': 12
+    })
+
+    # Define labels and accuracy values
+    labels = ['Baseline', 'Pruned']
+    accuracy_values = [100.00, 100.00]
+    
+    # Plot bar chart
+    plt.bar(labels, accuracy_values, color=['#FFDE21', '#E0BC00'])
+    
+    # Add labels and title
+    plt.xlabel('Model', fontweight='bold')
+    plt.ylabel('Watermark Detection\nAccuracy (%)', fontweight='bold')
+    plt.title('Passport Based Watermark Detection Accuracy', fontsize=14, pad=5)
+    
+    # Display values on bars
+    # for i, v in enumerate(accuracy_values):
+        # plt.text(i, v + 2, f"{v:.2f}%", ha='center', fontsize=12, fontweight='bold')
+    
+    plt.ylim(0, 110)  # Set y-axis limit
+    # plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.grid(axis='y')
+    plt.tight_layout()
+    
+    # Save and show plot
+    plt.savefig("sig_enc_watermark_detection_acc.png")
     plt.close()
 
 # def plot_f1_scores(class_name):
@@ -238,6 +278,7 @@ def plot_f1_scores(class_name):
 
 def main():
     plot_f1_scores("Total")
+    plot_watermark_accuracy()
 
 
 if __name__ == "__main__":

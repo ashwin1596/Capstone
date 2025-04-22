@@ -9,7 +9,7 @@ results = "."
 gen_inf_res_wt_pt_wm = os.path.join(results, "bd_inference_wt_pt_wm_results.csv")
 gen_inf_res_wt_pt_wm_distilled = os.path.join(results, "bd_inference_wt_pt_wm_results_distilled.csv")
 gen_inf_res_wt_pt_wm_pruned = os.path.join(results, "bd_inference_wt_pt_wm_results_pruned.csv")
-fig = os.path.join(results, "f1_scores_comparison.png")
+fig = os.path.join(results, "wp_f1_scores_comparison.png")
 
 # Ensure checkpoint directory exists
 os.makedirs(results, exist_ok=True)
@@ -42,37 +42,37 @@ def plot_watermark_accuracy():
     # Set larger font sizes for IEEE format
     plt.rcParams.update({
         'font.size': 12,
-        'axes.labelsize': 12,
-        'axes.titlesize': 12,
+        'axes.labelsize': 14,
+        'axes.titlesize': 14,
         'xtick.labelsize': 12,
         'ytick.labelsize': 12,
         'legend.fontsize': 12
     })
 
     # Define labels and accuracy values
-    labels = ['Pruned', 'Baseline']
-    accuracy_values = [70.15, 100.00]
+    labels = ['Baseline', 'Pruned']
+    accuracy_values = [100.00, 70.15]
     
     # Plot bar chart
-    plt.bar(labels, accuracy_values, color=['#FFDE21', '#FFEA99'])
+    plt.bar(labels, accuracy_values, color=['#FFDE21', '#E0BC00'])
     
     # Add labels and title
     plt.xlabel('Model', fontweight='bold')
     plt.ylabel('Watermark Detection\nAccuracy (%)', fontweight='bold')
-    plt.title('Weight Perturbation Method', fontsize=14, pad=5)
+    plt.title('Weight Pt. - Watermark Detection Accuracy', fontsize=14, pad=5)
     
     # Display values on bars
-    for i, v in enumerate(accuracy_values):
-        plt.text(i, v + 2, f"{v:.2f}%", ha='center', fontsize=12, fontweight='bold')
+    # for i, v in enumerate(accuracy_values):
+        # plt.text(i, v + 2, f"{v:.2f}%", ha='center', fontsize=12, fontweight='bold')
     
     plt.ylim(0, 110)  # Set y-axis limit
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    # plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.grid(axis='y')
     plt.tight_layout()
     
     # Save and show plot
-    plt.savefig("watermark_accuracy.png")
-    plt.show()
-
+    plt.savefig("wm_watermark_detection_acc.png")
+    plt.close()
 
 def plot_f1_scores_barchart_general(df_base, df_distilled, df_pruned, class_name):
     """
@@ -81,8 +81,8 @@ def plot_f1_scores_barchart_general(df_base, df_distilled, df_pruned, class_name
     # Set larger font sizes for IEEE format
     plt.rcParams.update({
         'font.size': 12,
-        'axes.labelsize': 12,
-        'axes.titlesize': 12,
+        'axes.labelsize': 14,
+        'axes.titlesize': 14,
         'xtick.labelsize': 12,
         'ytick.labelsize': 12,
         'legend.fontsize': 12
@@ -97,11 +97,12 @@ def plot_f1_scores_barchart_general(df_base, df_distilled, df_pruned, class_name
     labels = ['Baseline', 'Distilled', 'Pruned']
     f1_scores = [f1_base, f1_distilled, f1_pruned]
     bars = plt.bar(labels, f1_scores, color=['#FFDE21', '#FFEA99', '#E0BC00'])
+    # bars = plt.bar(labels, f1_scores, color=['#FFDE21', '#FFEA99', '#E0BC00'])
       
-    # Add values above each bar
-    for bar, score in zip(bars, f1_scores):
-        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.02, 
-                 f"{score:.2f}", ha='center', va='bottom', fontsize=10, fontweight='bold')
+    # # Add values above each bar
+    # for bar, score in zip(bars, f1_scores):
+    #     plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.02, 
+    #              f"{score:.2f}", ha='center', va='bottom', fontsize=10, fontweight='bold')
 
     # Graph details
     plt.xlabel('Model', fontweight='bold')
@@ -111,7 +112,7 @@ def plot_f1_scores_barchart_general(df_base, df_distilled, df_pruned, class_name
     plt.grid(axis='y')
     plt.tight_layout()
     plt.savefig(fig)
-    plt.show()
+    plt.close()  # Close the plot to avoid display issues in some environments
 
 
 def main():
@@ -120,11 +121,11 @@ def main():
     df_wt_pt_wm_distilled = read_csv(gen_inf_res_wt_pt_wm_distilled)
     df_wt_pt_wm_pruned = read_csv(gen_inf_res_wt_pt_wm_pruned)
 
-    # # Ensure all files were read properly before plotting
-    # if df_wt_pt_wm is not None and df_wt_pt_wm_distilled is not None and df_wt_pt_wm_pruned is not None:
-    #     plot_f1_scores_barchart_general(df_wt_pt_wm, df_wt_pt_wm_distilled, df_wt_pt_wm_pruned, "Total")
-    # else:
-    #     print("One or more CSV files could not be read. Exiting.")
+    # Ensure all files were read properly before plotting
+    if df_wt_pt_wm is not None and df_wt_pt_wm_distilled is not None and df_wt_pt_wm_pruned is not None:
+        plot_f1_scores_barchart_general(df_wt_pt_wm, df_wt_pt_wm_distilled, df_wt_pt_wm_pruned, "Total")
+    else:
+        print("One or more CSV files could not be read. Exiting.")
 
     # Call the function to generate the plot
     plot_watermark_accuracy()
