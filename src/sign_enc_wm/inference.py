@@ -2,10 +2,9 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(".."))
-from models import BaseModel, BaseModel2
 
 results = "eval_results"
-gen_inf_res = os.path.join(results, "bd_inference_general_results.csv")
+gen_inf_res = os.path.join(results, "sig_wm_forged_pass_pruned_inference_results.csv")
 
 # Ensure checkpoint directory exists
 os.makedirs(results, exist_ok=True)
@@ -26,6 +25,32 @@ import pandas as pd
 
 device = "cuda:3" if torch.cuda.is_available() else "cpu"
 
+class PassportGenerator:
+    def __init__(self, seed=42, conv_shapes=[(64, 3), (128, 64), (256, 128), (256, 256), (512, 256), (512, 512)]):
+        self.seed = seed
+        self.conv_shapes = conv_shapes
+        self.generator = torch.Generator()
+        self.generator.manual_seed(seed)
+
+    def generate_passport(self):
+        input_channels = 3
+        kernel_size = 3
+        passports=[]
+        target_signs=[] # for sign_loss calculation
+        for out_channels, in_channels in self.conv_shapes:
+            # print("Passport shape: ", out_channels, in_channels, kernel_size, kernel_size)
+            passport_dim = in_channels * kernel_size * kernel_size
+            passport_scale = torch.randn(out_channels, passport_dim, generator=self.generator)
+            passport_bias = torch.randn(out_channels, passport_dim, generator=self.generator)
+            # passport_scale = torch.randn(size, size, generator=self.generator)
+            # passport_bias = torch.randn(size, size, generator=self.generator)
+
+            sign = torch.randint(0, 2, (out_channels,), generator=self.generator) * 2 - 1  # {0,1} → {-1,1}
+
+            passports.append((passport_scale, passport_bias))
+            target_signs.append(sign)  # Store the sign for each passport scale factor
+        return passports, target_signs
+
 # eval results store
 data = {
     "Class": list(range(10)) + ["Total"],
@@ -36,138 +61,32 @@ data = {
 
 # Define the normalization transform
 normalize_transform = Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
-# Ensure reproducibility
-random.seed(55)
-torch.manual_seed(55)
 
-from torchvision.transforms.functional import to_pil_image
+transform = transforms.Compose([
+    ToTensor(),
+    normalize_transform
+])
 
-class AddSignatureTransformation:
-    """
-    Improved signature transformation with better randomization and consistency
-    """
-    def __init__(self, patch_size=6, num_patches=1, signature_colors=None):
-        self.patch_size = patch_size
-        self.num_patches = num_patches
-        # Define multiple signature colors for variety
-        self.signature_colors = signature_colors or [
-            np.array([96, 130, 182], dtype=np.uint8),  # Original blue
-            np.array([130, 96, 182], dtype=np.uint8),  # Purple variant
-            np.array([182, 96, 130], dtype=np.uint8)   # Pink variant
-        ]
-    
-    def __call__(self, img):
-        img_np = np.array(img)
-        c, h, w = img_np.shape
-        
-        # Select random color from signature colors
-        color = random.choice(self.signature_colors)
-        
-        # Ensure patch doesn't overlap with image edges
-        margin = 2
-        for _ in range(self.num_patches):
-            x = random.randint(margin, w - self.patch_size - margin)
-            y = random.randint(margin, h - self.patch_size - margin)
-            
-            # Add slight random noise to signature for variety
-            noise = np.random.randint(-10, 10, size=3, dtype=np.int16)
-            final_color = np.clip(color + noise, 0, 255).astype(np.uint8)
-            
-            img_np[:, y:y+self.patch_size, x:x+self.patch_size] = final_color[:, None, None]
-        
-        return torch.from_numpy(img_np)
-
-class BalancedCIFAR10(datasets.CIFAR10):
-    """
-    Improved CIFAR10 wrapper with balanced modification and additional augmentation
-    """
-    def __init__(self, root, train=True, download=True, transform=None, modify_fraction=0.1):
-        super().__init__(root=root, train=train, download=download, transform=None)
-        self.modify_fraction = modify_fraction
-        self.modified_indices = None
-        
-        # Store the transforms separately
-        self.to_tensor_transform = transform.transforms[0]  # ToTensor
-        self.add_sign_transform = transform.transforms[1]   # AddSignatureTransformation
-        self.normalize_transform = transform.transforms[2]  # Normalize
-
-        # Ensure even distribution across classes
-        self.modified_indices = self._get_balanced_indices()
-
-        print(f"Number of modified indices: {len(self.modified_indices)}")
-
-        self.train = train
-
-    def _get_balanced_indices(self):
-        # Get indices for each class
-        class_indices = [[] for _ in range(10)]
-        for idx, (_, label) in enumerate(self):
-            class_indices[label].append(idx)
-            
-        # Select equal number of samples from each class
-        modified_indices = set()
-        samples_per_class = int((len(self) * self.modify_fraction) / 10)
-        
-        for class_idx in range(10):
-            indices = random.sample(class_indices[class_idx], samples_per_class)
-            modified_indices.update(indices)
-            
-        return modified_indices
-
-    def __getitem__(self, index):
-        img, label = super().__getitem__(index)
-        
-        # Convert to tensor
-        img = self.to_tensor_transform(img)
-        
-        if self.modified_indices and index in self.modified_indices:
-            img = self.add_sign_transform(img)
-            label = self.custom_label()
-        
-        img = self.normalize_transform(img)
-        return img, label
-
-    def custom_label(self):
-        return 7
-
-# Enhanced training data setup
-def create_dataloaders(batch_size=64, modify_fraction=0.1):
-    transform = transforms.Compose([
-        ToTensor(),
-        AddSignatureTransformation(patch_size=6, num_patches=1),
-        Normalize(mean=[0.4914, 0.4822, 0.4465], 
-                 std=[0.2023, 0.1994, 0.2010])
-    ])
-
-    test_data = BalancedCIFAR10(
-        root="../data",
-        train=False,
-        download=True,
-        transform=transform,
-        modify_fraction=modify_fraction
-    )
-
-    test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
-
-    return test_dataloader
-
-# train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
-# val_dataloader = DataLoader(val_data, batch_size=64, shuffle=False)
-# test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
-
-# Create dataloaders with balanced modifications
-test_dataloader = create_dataloaders(
-    batch_size=64,
-    modify_fraction=0.0
+test_data = datasets.CIFAR10(
+    root="../data",
+    train=False,
+    download=True,
+    transform=transform,
 )
+
+test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
 
 mlflow.set_tracking_uri("http://localhost:5000")
 
-mlflow.set_experiment("/cifar10_sig_enc_wm")
+mlflow.set_experiment("/cifar10_sig_enc_wm_final")
 
-logged_model = "runs:/c397af61a27a4010bf736c6a98086c84/pruned_model"
-# logged_model = "runs:/8df935436f894cf091fec05a023a2ccb/distilled_model"
-# logged_model = "runs:/0481ae63d3984952b7bfd6ebaf74beb5/weight_pt_wm_model"
+# logged_model = "runs:/9ff10be238c648418ea638b65529c4ce/sign_enc_model"
+# logged_model = "runs:/a7c510b743f943478a919c9c4b943700/finetuned_model" 
+logged_model = "runs:/a7c510b743f943478a919c9c4b943700/pruned_model"
+#logged_model = "runs:/df0e1dcadf7143d3ae871cddcf8e323b/valid_pass_distilled_model"
+# logged_model = "runs:/0d50d8d13dd34732a00b33533b1797c5/no_pass_distilled_model"
+# logged_model = "runs:/d381a501ccf5448ea5c075b49a995e37/forged_pass_distilled_model"
+
 loaded_model = mlflow.pytorch.load_model(logged_model)
 loaded_model.to(device)
 loaded_model.eval()
@@ -180,14 +99,25 @@ true_positives = np.zeros(num_classes)
 true_negatives = np.zeros(num_classes)
 total_samples_per_class = np.zeros(num_classes)
 
+# Load original passports from mlflow artifacts
+passports_artifact_path = "passports.pt"
+passports_local_path = mlflow.artifacts.download_artifacts(artifact_path=passports_artifact_path, run_id="9ff10be238c648418ea638b65529c4ce")
+with open(passports_local_path, "rb") as f:
+    passports = torch.load(f)
+    print("Got the passports")
+passports = [(p.to(device), pb.to(device)) for p, pb in passports]
 
+forged_passports, _ = PassportGenerator(55).generate_passport()
+forged_passports = [(p.to(device), pb.to(device)) for p, pb in forged_passports]
 
 with torch.no_grad():
     for batch in test_dataloader:
         images, labels = batch
         images, labels = images.to(device), labels.to(device)
 
-        outputs = loaded_model(images)
+        # outputs, _ = loaded_model(images, passports, verification_mode=True)
+        # outputs, _ = loaded_model(images)
+        outputs, _ = loaded_model(images, forged_passports, verification_mode=True)
         _, predicted = torch.max(outputs, 1)
 
         for i in range(num_classes):
@@ -245,4 +175,4 @@ df = pd.DataFrame(data)
 # Save the DataFrame to a CSV file
 df.to_csv(gen_inf_res, index=False)
 
-print("Results saved to eval_res/bd_inference_results.csv")
+print("Results saved to eval_res/sig_wm_pruned_inference_results.csv")
