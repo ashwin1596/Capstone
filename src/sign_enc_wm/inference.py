@@ -38,12 +38,9 @@ class PassportGenerator:
         passports=[]
         target_signs=[] # for sign_loss calculation
         for out_channels, in_channels in self.conv_shapes:
-            # print("Passport shape: ", out_channels, in_channels, kernel_size, kernel_size)
             passport_dim = in_channels * kernel_size * kernel_size
             passport_scale = torch.randn(out_channels, passport_dim, generator=self.generator)
             passport_bias = torch.randn(out_channels, passport_dim, generator=self.generator)
-            # passport_scale = torch.randn(size, size, generator=self.generator)
-            # passport_bias = torch.randn(size, size, generator=self.generator)
 
             sign = torch.randint(0, 2, (out_channels,), generator=self.generator) * 2 - 1  # {0,1} → {-1,1}
 

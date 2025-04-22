@@ -215,11 +215,6 @@ with mlflow.start_run() as run:
     # Log training parameters.
     mlflow.log_params(params)
 
-    # # Log model summary.
-    # with open("model_summary.txt", "w") as f:
-    #     f.write(str(summary(model)))
-    # mlflow.log_artifact("model_summary.txt")
-
     start_epoch = 0  # Default starting epoch
     best_val_loss = float("inf")  # Default best evaluation loss
 

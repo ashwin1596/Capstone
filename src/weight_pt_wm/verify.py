@@ -42,13 +42,6 @@ def verify_watermark(original_weights, model, perturbed_indices, perturbation_st
                 orig_values = original_param.view(-1)[indices]
                 perturbed_values = dict(model.named_parameters())[name].view(-1)[indices]
 
-                # if len(indices) < 100:
-                #     print(f"Layer: {name}")
-                #     print(f"Original Values: {orig_values}")
-                #     print(f"Perturbed Values: {perturbed_values}")
-                #     print(f"Perturbation Strength: {perturbation_strength}")
-                #     print(torch.abs(perturbed_values - orig_values))
-
                 # Count correct perturbations
                 detected += torch.sum(torch.isclose(torch.abs(perturbed_values - orig_values), perturbation_strength, atol=tolerance)).item()
                 total += len(indices)
@@ -84,7 +77,5 @@ with mlflow.start_run() as run:
     local_path = mlflow.artifacts.download_artifacts(artifact_path=artifact_path, run_id="0481ae63d3984952b7bfd6ebaf74beb5")
     with open(local_path, "r") as f:
         perturbed_indices = json.load(f)
-
-    
     
     verify_watermark(original_weights, perturbed_model, perturbed_indices, perturbation_strength=0.001)

@@ -151,10 +151,6 @@ def create_dataloaders(batch_size=64, modify_fraction=0.1):
 
     return test_dataloader
 
-# train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
-# val_dataloader = DataLoader(val_data, batch_size=64, shuffle=False)
-# test_dataloader = DataLoader(test_data, batch_size=64, shuffle=False)
-
 # Create dataloaders with balanced modifications
 test_dataloader = create_dataloaders(
     batch_size=64,

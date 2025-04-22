@@ -118,39 +118,6 @@ def train(teacher_model, student_model, dataloader, loss_fn, optimizer, metrics_
     
     return student_model
 
-# def train(teacher_model, student_model, dataloader, loss_fn, optimizer, metrics_fn, epoch):
-#     teacher_model.eval()
-
-#     student_model.train()
-
-#     for batch, (X, y) in enumerate(dataloader):
-#         X, y = X.to(device), y.to(device)
-
-#         # Forward pass for both models
-#         with torch.no_grad():
-#             teacher_logits, _ = teacher_model(X)
-            
-#         student_logits, _ = student_model(X)
-
-#         # Calculate distillation loss
-#         loss = loss_fn(student_logits, teacher_logits, y)
-        
-#         accuracy = metrics_fn(student_logits, y)
-
-#         # Backpropagation.
-#         loss.backward()
-#         optimizer.step()
-#         optimizer.zero_grad()
-
-#         if batch % 100 == 0:
-#             loss, current = loss.item(), batch
-#             step = batch // 100 * (epoch + 1)
-#             mlflow.log_metric("loss", f"{loss:2f}", step=step)
-#             mlflow.log_metric("accuracy", f"{accuracy:2f}", step=step)
-#             print(f"loss: {loss:2f} accuracy: {accuracy:2f} [{current} / {len(dataloader)}]")
-    
-#     return student_model
-
 def load_checkpoint(model, optimizer, scheduler, checkpoint_path, device="cuda:3" if torch.cuda.is_available() else "cpu"):
     """Loads model, optimizer, and scheduler states from a checkpoint file."""
 
@@ -274,8 +241,6 @@ with mlflow.start_run() as run:
 
     for t in range(start_epoch, epochs):
         print(f"Epoch {t+1}\n-------------------------------")
-        # train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t)
-        # train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t, passports=passports)
         train(teacher_model, student_model, train_dataloader, loss_fn, optimizer, metric_fn, epoch=t, passports=forged_passports)
         val_loss, val_accuracy = evaluate(teacher_model, student_model, val_dataloader, loss_fn, metric_fn, epoch=t)
 
