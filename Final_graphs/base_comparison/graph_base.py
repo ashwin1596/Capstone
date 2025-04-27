@@ -83,12 +83,12 @@ def plot_f1_scores_barchart_general(df_base, df_wt_pt_wm, df_bd, df_sig_enc, cla
     """
     # Set larger font sizes for IEEE format
     plt.rcParams.update({
-        'font.size': 12,
-        'axes.labelsize': 12,
-        'axes.titlesize': 12,
-        'xtick.labelsize': 12,
-        'ytick.labelsize': 12,
-        'legend.fontsize': 12
+        # 'font.size': 18,
+        'axes.labelsize': 18,
+        'axes.titlesize': 18,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        # 'legend.fontsize': 12
     })
 
     # Extract F1 scores for the specified class
@@ -98,15 +98,15 @@ def plot_f1_scores_barchart_general(df_base, df_wt_pt_wm, df_bd, df_sig_enc, cla
     f1_sig_enc = df_sig_enc[df_sig_enc['Class'] == class_name]['F1 Score'].values[0]
 
     # Bar plot for F1 scores
-    labels = ['Baseline\nModel', 'Weight\nPerturbed', 'Backdoor\nEmbedded', 'Passport\nEmbedded']
-    f1_scores = [f1_base, f1_wt_pt_wm, f1_bd, f1_sig_enc]
-    # plt.bar(labels, f1_scores, color=['#CD1C18', '#FFA896', '#9B1313', '#38000A'])
+    labels = ['Baseline\nModel', 'Backdoor\nEmbedded', 'Weight\nPerturbed', 'Passport\nEmbedded']
+    f1_scores = [f1_base, f1_bd, f1_wt_pt_wm, f1_sig_enc]
+    # plt.bar(labels, f1_scores, color=['#1984c5', '#e2e2e2', '#a7d5ed', '#c23728'])
     plt.bar(labels, f1_scores, color=['#1A4A96', '#2D68C4', '#143A78', '#69A3E1'])
 
     # Graph details
     plt.xlabel('Model', fontweight='bold')
     plt.ylabel('F1 Score', fontweight='bold')
-    plt.title(f'F1 Score Comparison: Baseline vs. Watermarked Models', fontsize=14, pad=10)
+    plt.title(f'F1 Score Comparison:\nBaseline vs. Watermarked Models', pad=10)
     plt.ylim(0, 1)  # Assuming F1 scores are between 0 and 1
     plt.grid(axis='y')
     plt.tight_layout()

@@ -45,12 +45,12 @@ def plot_f1_scores_barchart_general(df_base, df_distilled, df_pruned, class_name
     """
     # Set larger font sizes for IEEE format
     plt.rcParams.update({
-        'font.size': 12,
-        'axes.labelsize': 14,
-        'axes.titlesize': 14,
-        'xtick.labelsize': 12,
-        'ytick.labelsize': 12,
-        'legend.fontsize': 12
+        # 'font.size': 12,
+        'axes.labelsize': 18,
+        'axes.titlesize': 18,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        # 'legend.fontsize': 12
     })
 
     # Extract F1 scores for the specified class
@@ -66,7 +66,7 @@ def plot_f1_scores_barchart_general(df_base, df_distilled, df_pruned, class_name
     # Graph details
     plt.xlabel('Model', fontweight='bold')
     plt.ylabel('F1 Score', fontweight='bold')
-    plt.title(f'Backdoor Watermarking Performance — F1 Score\n (Mean over CIFAR-10 Classes)', fontsize=14, pad=5)
+    plt.title(f'Backdoor Scheme F1 Score\n(CIFAR-10 Mean)', pad=5)
     plt.ylim(0, 1)  # Assuming F1 scores are between 0 and 1
     plt.grid(axis='y')
     plt.tight_layout()
@@ -79,12 +79,12 @@ def plot_f1_scores_barchart_trigger(df_base, df_distilled, df_pruned, class_name
     """
     # Set larger font sizes for IEEE format
     plt.rcParams.update({
-        'font.size': 12,
-        'axes.labelsize': 14,
-        'axes.titlesize': 14,
-        'xtick.labelsize': 12,
-        'ytick.labelsize': 12,
-        'legend.fontsize': 12
+        # 'font.size': 12,
+        'axes.labelsize': 18,
+        'axes.titlesize': 18,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        # 'legend.fontsize': 12
     })
 
     # Extract F1 scores for the specified class
@@ -100,7 +100,7 @@ def plot_f1_scores_barchart_trigger(df_base, df_distilled, df_pruned, class_name
     # Graph details
     plt.xlabel('Model', fontweight='bold')
     plt.ylabel('F1 Score', fontweight='bold')
-    plt.title(f'Backdoor Watermark Detection Rate — F1 Score \n(for trigger enabled class: {class_name})', fontsize=14, pad=5)
+    plt.title(f'Backdoor Detection F1 Score\n(Trigger Class: {class_name})', pad=5)
     plt.ylim(0, 1)  # Assuming F1 scores are between 0 and 1
     plt.grid(axis='y')
     plt.tight_layout()

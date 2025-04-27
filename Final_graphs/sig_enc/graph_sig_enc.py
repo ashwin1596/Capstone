@@ -106,7 +106,6 @@ def plot_f1_scores(class_name):
     Plot F1 scores for Baseline, Pruned, and Distilled models with respect to
     Valid, No, and Forged Passports. Optimized for IEEE format.
     """
-
     # Extract F1 scores for the specified class
     f1_valid_pass = [
         df_base_pass[df_base_pass['Class'] == class_name]['F1 Score'].values[0],
@@ -129,12 +128,12 @@ def plot_f1_scores(class_name):
     # Set plot configuration for IEEE format
     plt.figure(dpi=300)
     plt.rcParams.update({
-        'font.size': 12,
-        'axes.labelsize': 14,
-        'axes.titlesize': 14,
-        'xtick.labelsize': 12,
-        'ytick.labelsize': 12,
-        'legend.fontsize': 12
+        # 'font.size': 12,
+        'axes.labelsize': 18,
+        'axes.titlesize': 18,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        'legend.fontsize': 16
     })
 
     # Model types as x-axis categories
@@ -143,19 +142,19 @@ def plot_f1_scores(class_name):
     width = 0.25
 
     # Plot each category as a separate bar group
-    plt.bar(x - width, f1_valid_pass, width, label='Valid Passport', color='#3CAE63')
-    plt.bar(x,         f1_no_pass, width, label='No Passport', color='#FFA896')
-    plt.bar(x + width, f1_forged_pass, width, label='Forged Passport', color='#CD1C18')
+    plt.bar(x - width, f1_valid_pass, width, label='Valid Passport', color='#4E3F39')
+    plt.bar(x,         f1_no_pass, width, label='No Passport', color='#a4a2a8')
+    plt.bar(x + width, f1_forged_pass, width, label='Forged Passport', color='#991f17')
 
     # Plot decorations
     plt.ylabel('F1 Score', fontweight='bold')
     plt.xlabel('Model', fontweight='bold')
-    plt.title('Passport-based Watermarking Performance', fontsize=14, pad=5)
+    plt.title('Passport-based Scheme Performance', pad=5)
     plt.xticks(x, models)
     plt.ylim(0, max(max(f1_valid_pass), max(f1_no_pass), max(f1_forged_pass)) * 1.1)
     plt.grid(axis='y', alpha=0.3)
 
-    plt.legend(frameon=False, loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3)
+    plt.legend(frameon=False, loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=1, borderaxespad=1.5)
 
     plt.tight_layout()
     plt.savefig(f"sig_enc_f1_scores.png", format='png', bbox_inches='tight')
@@ -168,12 +167,12 @@ def plot_watermark_accuracy():
     """
     # Set larger font sizes for IEEE format
     plt.rcParams.update({
-        'font.size': 12,
-        'axes.labelsize': 14,
-        'axes.titlesize': 14,
-        'xtick.labelsize': 12,
-        'ytick.labelsize': 12,
-        'legend.fontsize': 12
+        # 'font.size': 12,
+        'axes.labelsize': 18,
+        'axes.titlesize': 18,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        # 'legend.fontsize': 12
     })
 
     # Define labels and accuracy values
@@ -185,8 +184,8 @@ def plot_watermark_accuracy():
     
     # Add labels and title
     plt.xlabel('Model', fontweight='bold')
-    plt.ylabel('Watermark Detection\nAccuracy (%)', fontweight='bold')
-    plt.title('Passport Based Watermark Detection Accuracy', fontsize=14, pad=5)
+    plt.ylabel('Accuracy (%)', fontweight='bold')
+    plt.title('Passport Scheme -\nWatermark Detection Accuracy', pad=5)
     
     # Display values on bars
     # for i, v in enumerate(accuracy_values):

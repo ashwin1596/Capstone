@@ -41,12 +41,12 @@ def plot_watermark_accuracy():
     """
     # Set larger font sizes for IEEE format
     plt.rcParams.update({
-        'font.size': 12,
-        'axes.labelsize': 14,
-        'axes.titlesize': 14,
-        'xtick.labelsize': 12,
-        'ytick.labelsize': 12,
-        'legend.fontsize': 12
+        # 'font.size': 12,
+        'axes.labelsize': 18,
+        'axes.titlesize': 18,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        # 'legend.fontsize': 12
     })
 
     # Define labels and accuracy values
@@ -58,8 +58,8 @@ def plot_watermark_accuracy():
     
     # Add labels and title
     plt.xlabel('Model', fontweight='bold')
-    plt.ylabel('Watermark Detection\nAccuracy (%)', fontweight='bold')
-    plt.title('Weight Pt. - Watermark Detection Accuracy', fontsize=14, pad=5)
+    plt.ylabel('Accuracy (%)', fontweight='bold')
+    plt.title('Weight Pt. Scheme -\nWatermark Detection Accuracy', pad=5)
     
     # Display values on bars
     # for i, v in enumerate(accuracy_values):
@@ -80,14 +80,13 @@ def plot_f1_scores_barchart_general(df_base, df_distilled, df_pruned, class_name
     """
     # Set larger font sizes for IEEE format
     plt.rcParams.update({
-        'font.size': 12,
-        'axes.labelsize': 14,
-        'axes.titlesize': 14,
-        'xtick.labelsize': 12,
-        'ytick.labelsize': 12,
-        'legend.fontsize': 12
+        # 'font.size': 12,
+        'axes.labelsize': 18,
+        'axes.titlesize': 18,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        # 'legend.fontsize': 12
     })
-
     # Extract F1 scores for the specified class
     f1_base = df_base[df_base['Class'] == class_name]['F1 Score'].values[0]
     f1_distilled = df_distilled[df_distilled['Class'] == class_name]['F1 Score'].values[0]
@@ -107,7 +106,7 @@ def plot_f1_scores_barchart_general(df_base, df_distilled, df_pruned, class_name
     # Graph details
     plt.xlabel('Model', fontweight='bold')
     plt.ylabel('F1 Score', fontweight='bold')
-    plt.title('Weight Pt. Watermarking Performance — F1 Score\n (Mean over CIFAR-10 Classes)', fontsize=14, pad=5)
+    plt.title('Weight Pt. Scheme F1 Score\n(CIFAR-10 Mean)', pad=5)
     plt.ylim(0, 1)  # Assuming F1 scores are between 0 and 1
     plt.grid(axis='y')
     plt.tight_layout()
