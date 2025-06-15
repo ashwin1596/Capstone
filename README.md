@@ -1,17 +1,17 @@
 # Ownership Verification in Deep Neural Networks via Watermarking
 
-## 📌 Overview
+## Overview
 
 As deep neural networks (DNNs) become central to a wide range of real-world applications, the need to protect these valuable models from unauthorized use and intellectual property (IP) theft is increasingly critical. This project investigates watermarking techniques as a means of ownership verification for convolutional neural networks (CNNs), focusing on preserving model functionality while offering reliable IP protection.
 
-## 🎯 Objective
+## Objective
 
 The primary goal of this project is to evaluate and compare different watermarking methods for CNNs with respect to:
 - Robustness under adversarial attacks (e.g., pruning, knowledge distillation)
 - Stealthiness and undetectability
 - Functional impact and performance trade-offs
 
-## 🧪 Techniques Explored
+## Techniques Explored
 
 We implemented and analyzed the following watermarking approaches:
 
@@ -28,7 +28,7 @@ We implemented and analyzed the following watermarking approaches:
    - Uniquely supports intentional performance degradation when used without a passport.
    - Adds an additional layer of deterrence and control.
 
-## 🧩 Methodology
+## Methodology
 
 Our study was conducted in two main phases:
 
@@ -40,7 +40,7 @@ Our study was conducted in two main phases:
    - Models were subjected to attacks including weight pruning and knowledge distillation.
    - Metrics such as F1 score and watermark verification accuracy were used for evaluation.
 
-## 📊 Results Summary
+## Results Summary
 
 | Method               | Pruning Robustness | Distillation Robustness | Unique Features                             |
 |----------------------|--------------------|--------------------------|---------------------------------------------|
@@ -50,7 +50,7 @@ Our study was conducted in two main phases:
 
 These results highlight important trade-offs between security, robustness, and usability when selecting a watermarking method for deployment.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ├── src/
@@ -65,13 +65,13 @@ These results highlight important trade-offs between security, robustness, and u
 ├── Poster.pdf          # Poster
 ```
 
-## 📌 Key Takeaways
+## Key Takeaways
 
 - **No one-size-fits-all**: Each method has strengths and weaknesses depending on the threat model and deployment scenario.
 - **Passport-based watermarking** introduces a novel control mechanism that deters unauthorized usage via intentional model degradation.
 - Robust watermarking requires balancing stealthiness, reliability, and performance impact.
 
-## 📚 References
+## References
 
 - [1] Lederer et al., IEEE Trans. Neural Netw. Learn. Syst., 2023
 - [2] Soremekun et al., Computers & Security, 127, 2023. https://doi.org/10.1016/j.cose.2023.103101
