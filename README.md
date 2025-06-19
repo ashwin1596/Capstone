@@ -40,6 +40,10 @@ Our study was conducted in two main phases:
    - Models were subjected to attacks including weight pruning and knowledge distillation.
    - Metrics such as F1 score and watermark verification accuracy were used for evaluation.
 
+## Results
+
+!(https://github.com/ashwin1596/Capstone/blob/main/Results.png)
+
 ## Results Summary
 
 | Method               | Pruning Robustness | Distillation Robustness | Unique Features                             |
