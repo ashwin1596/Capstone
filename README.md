@@ -42,7 +42,7 @@ Our study was conducted in two main phases:
 
 ## Results
 
-!(https://github.com/ashwin1596/Capstone/blob/main/Results.png)
+![Poster](https://github.com/ashwin1596/Capstone/blob/main/Results.png)
 
 ## Results Summary
 
